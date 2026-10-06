@@ -21,6 +21,16 @@ in the top bar (`/admin/editor`).
   task opens into a form with all fields (fixed layout or free blocks,
   answer fields, hints, bonus, "Das sollte drinstehen", notes) and a
   **Vorschau** button that renders it exactly as Fachbetreuer see it.
+- **Images**: an `image` block has a picker with the images already stored
+  for this workbook, a thumbnail of the current `src`, and an upload field
+  (**Hochladen**). Uploads go to `workbooks/assets/<workbook-id>/` and set
+  `src` automatically. Only PNG, JPEG, GIF and WebP up to 5 MB are accepted
+  (checked by the file content, not the name; no SVG). File names are
+  lowercased and transliterated (`Größe.PNG` → `groesse.png`); an existing
+  file is never overwritten (`-2`, `-3` … is appended). The image is part of
+  the workbook only after **Speichern**. Unused images can be removed via
+  `DELETE /api/editor/<workbook-id>/assets/<name>` (refused while an image
+  block of a loaded workbook still uses it) or directly on disk.
 - **Saving** validates the whole workbook first; problems are listed and
   marked at the field. The previous file is copied to
   `workbooks/_backups/` (last 10 versions per workbook), then the YAML is
@@ -170,6 +180,7 @@ to `workbooks/`:
 ```
 
 Paths outside `workbooks/assets/` are rejected.
+The form editor can upload images into this folder for you (see above).
 
 ## Colours
 

@@ -2,30 +2,42 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, ValidationError
+from starlette.concurrency import run_in_threadpool
+from starlette.datastructures import UploadFile
 
 from app.api.admin import localize_error
 from app.api.common import render
 from app.api.progress import read_json
 from app.auth import Identity, require_trainer, verify_form, verify_json_api_any
 from app.editor import (
+    MAX_ASSET_BYTES,
+    AssetTooLarge,
     EditorConflict,
+    asset_directory,
     clean,
+    is_asset_name,
+    list_assets,
     load_for_editor,
     locked_ids,
     missing_locked,
     new_workbook_data,
+    referenced_assets,
     save,
+    store_asset,
     validate,
 )
 from app.loader import CatalogError
 from app.models.catalog import ID_PATTERN, Catalog, Level, Task
 from app.renderer import build_progress_view, build_view
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_trainer)])
 Trainer = Annotated[Identity, Depends(require_trainer)]
@@ -127,7 +139,8 @@ api = APIRouter(
 
 @api.get("/strings")
 def strings(request: Request) -> dict[str, Any]:
-    return request.app.state.translator.lookup("editor_ui")
+    translator = request.app.state.translator
+    return {**translator.lookup("editor_ui"), **translator.lookup("editor_assets")}
 
 
 @api.get("/{workbook_id}")
@@ -238,3 +251,84 @@ async def preview(request: Request):
         asset_url=lambda src: "/" + src,
     )
     return {"html": html}
+
+
+# --------------------------------------------------------------------------- image assets
+
+UPLOAD_OVERHEAD = 64 * 1024  # multipart boundaries and part headers
+UPLOAD_CHUNK = 64 * 1024
+
+
+def _asset_src(workbook_id: str, name: str) -> str:
+    return f"assets/{workbook_id}/{name}"
+
+
+@api.get("/{workbook_id}/assets")
+def assets(request: Request, workbook_id: str) -> list[dict[str, Any]]:
+    _entry(request, workbook_id)
+    directory = asset_directory(request.app.state.config.paths.workbooks, workbook_id)
+    return [{"src": _asset_src(workbook_id, a["name"]), **a} for a in list_assets(directory)]
+
+
+@api.post("/{workbook_id}/assets")
+async def upload_asset(request: Request, workbook_id: str):
+    """Store one uploaded image (multipart field ``file``) for this workbook."""
+    _entry(request, workbook_id)
+    limit = MAX_ASSET_BYTES + UPLOAD_OVERHEAD
+    length = request.headers.get("content-length")
+    if length and (not length.isdigit() or int(length) > limit):
+        return JSONResponse({"error": "too_large"}, status_code=413)
+
+    received = 0
+    receive = request.receive
+
+    async def limited_receive():
+        nonlocal received
+        message = await receive()
+        received += len(message.get("body", b""))
+        if received > limit:
+            raise AssetTooLarge
+        return message
+
+    limited = Request(request.scope, limited_receive)
+    try:
+        form = await limited.form(max_files=1, max_fields=1)
+    except AssetTooLarge:
+        return JSONResponse({"error": "too_large"}, status_code=413)
+    except HTTPException:
+        return JSONResponse({"error": "invalid request"}, status_code=422)
+    try:
+        upload = form.get("file")
+        if not isinstance(upload, UploadFile):
+            return JSONResponse({"error": "invalid request"}, status_code=422)
+
+        def chunks():
+            while chunk := upload.file.read(UPLOAD_CHUNK):
+                yield chunk
+
+        directory = asset_directory(request.app.state.config.paths.workbooks, workbook_id)
+        try:
+            name = await run_in_threadpool(store_asset, directory, upload.filename, chunks())
+        except AssetTooLarge:
+            return JSONResponse({"error": "too_large"}, status_code=413)
+        except ValueError:
+            return JSONResponse({"error": "unsupported_type"}, status_code=415)
+    finally:
+        await form.close()
+    log.info("editor.asset_uploaded workbook=%s name=%s", workbook_id, name)
+    return {"src": _asset_src(workbook_id, name), "name": name}
+
+
+@api.delete("/{workbook_id}/assets/{name}")
+def delete_asset(request: Request, workbook_id: str, name: str):
+    """Remove an image that no image block (of any loaded workbook) uses."""
+    _entry(request, workbook_id)
+    directory = asset_directory(request.app.state.config.paths.workbooks, workbook_id)
+    if not is_asset_name(name) or name not in {a["name"] for a in list_assets(directory)}:
+        raise HTTPException(status_code=404)
+    src = _asset_src(workbook_id, name)
+    if src in referenced_assets(request.app.state.registry.catalogs().values()):
+        return JSONResponse({"error": "in_use"}, status_code=409)
+    (directory / name).unlink(missing_ok=True)
+    log.info("editor.asset_deleted workbook=%s name=%s", workbook_id, name)
+    return {"deleted": src}

@@ -496,3 +496,20 @@ editor_ui:
   hint_src: z. B. assets/heft-id/bild.png
   hint_colors: Hex-Farben wie #1B365D. Leer lassen = Standardfarbe.
   id_locked: Gesperrt – zu dieser ID gibt es bereits gespeicherte Antworten.
+
+# Image upload in the form editor (merged into /api/editor/strings).
+editor_assets:
+  asset_select: Vorhandenes Bild
+  asset_select_none: "– Bild auswählen –"
+  asset_select_empty: "– noch keine Bilder –"
+  asset_file: Neues Bild hochladen
+  asset_upload: Hochladen
+  asset_hint: PNG, JPEG, GIF oder WebP, höchstens 5 MB.
+  asset_uploading: Lädt hoch …
+  asset_uploaded: "Hochgeladen: {name}"
+  asset_no_file: Bitte zuerst eine Datei auswählen.
+  asset_too_big: Die Datei ist zu groß (höchstens 5 MB).
+  asset_wrong_type: Dieses Dateiformat ist nicht erlaubt. Erlaubt sind PNG, JPEG, GIF und WebP.
+  asset_network_error: Netzwerkfehler – das Bild wurde nicht hochgeladen.
+  asset_failed: Hochladen fehlgeschlagen.
+  asset_preview: Vorschau des Bildes

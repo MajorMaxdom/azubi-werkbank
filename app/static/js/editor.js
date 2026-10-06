@@ -17,6 +17,9 @@
   var openTasks = {};      // uid -> true
   var dirty = false;
   var busy = false;
+  var assets = null;       // images of this workbook: [{src, name, size}], null = not loaded
+  var assetMsgs = {};      // block uid -> {key, params, kind} (upload status message)
+  var MAX_ASSET_BYTES = 5 * 1024 * 1024;
 
   var LEVEL_COLORS = ["blue", "ochre", "green", "grey", "red"];
   var ANSWER_TYPES = ["text", "short", "checklist", "choice", "date"];
@@ -447,6 +450,7 @@
           fields.push(field(t("block_src"), bp + ".src", "text", { mono: true, hint: t("hint_src") }));
           fields.push(field(t("block_alt"), bp + ".alt", "text"));
           fields.push(field(t("block_caption"), bp + ".caption", "text"));
+          fields.push(assetPicker(b, bp));
         }
         if (b.type === "note") {
           fields.push(field(t("block_variant"), bp + ".variant", "select", { options: [["info", t("variant_info")], ["warning", t("variant_warning")]], fallback: "info" }));
@@ -459,6 +463,128 @@
           el("div", { className: "field-grid" }, fields));
       }),
       button("add-block", tp + ".blocks", "+ " + t("add_block")));
+  }
+
+  // ------------------------------------------------------------------ image assets
+
+  function isAssetSrc(src) {
+    return typeof src === "string" && /^assets\/[^\\:%]+$/.test(src) && src.split("/").indexOf("..") === -1;
+  }
+
+  function fillAssetSelect(select, current) {
+    select.textContent = "";
+    var list = assets || [];
+    select.appendChild(el("option", { value: "", text: t(list.length ? "asset_select_none" : "asset_select_empty") }));
+    list.forEach(function (a) {
+      var option = el("option", { value: a.src, text: a.name + " (" + Math.max(1, Math.round(a.size / 1024)) + " KB)" });
+      if (a.src === current) option.selected = true;
+      select.appendChild(option);
+    });
+  }
+
+  function refreshAssetSelects() {
+    document.querySelectorAll("[data-asset-select]").forEach(function (select) {
+      fillAssetSelect(select, getPath(select.getAttribute("data-asset-select") + ".src"));
+    });
+  }
+
+  function loadAssets() {
+    return api("GET", "/api/editor/" + workbookId + "/assets").then(function (res) {
+      if (res.ok && Array.isArray(res.data)) {
+        assets = res.data;
+        refreshAssetSelects();
+      }
+    }, function () { /* the free-text src field still works */ });
+  }
+
+  function updateThumb(bp) {
+    var img = document.querySelector('[data-thumb="' + bp + '"]');
+    if (!img) return;
+    var block = getPath(bp) || {};
+    img.alt = block.alt || t("asset_preview");
+    img.classList.remove("is-broken");
+    if (isAssetSrc(block.src)) {
+      img.src = "/" + block.src;
+      img.hidden = false;
+    } else {
+      img.removeAttribute("src");
+      img.hidden = true;
+    }
+  }
+
+  function assetMessage(key, msgKey, params, kind) {
+    if (msgKey) assetMsgs[key] = { key: msgKey, params: params, kind: kind };
+    else delete assetMsgs[key];
+    var box = document.querySelector('[data-asset-status="' + key + '"]');
+    if (box) {
+      box.textContent = msgKey ? t(msgKey, params) : "";
+      box.className = "editor-asset-status" + (kind ? " is-" + kind : "");
+    }
+  }
+
+  function assetPicker(block, bp) {
+    var key = uid(block);
+    var base = "f-" + bp.replace(/\./g, "-");
+    var select = el("select", { id: base + "-asset", "data-asset-select": bp });
+    fillAssetSelect(select, block.src);
+    var img = el("img", { className: "editor-thumb", "data-thumb": bp, alt: block.alt || t("asset_preview") });
+    img.addEventListener("error", function () { img.classList.add("is-broken"); });
+    if (isAssetSrc(block.src)) img.src = "/" + block.src;
+    else img.hidden = true;
+    var msg = assetMsgs[key];
+    return el("div", { className: "field field-wide editor-asset" },
+      img,
+      el("div", { className: "editor-asset-controls" },
+        el("div", { className: "field" },
+          el("label", { className: "micro-label", "for": base + "-asset", text: t("asset_select") }),
+          select),
+        el("div", { className: "field" },
+          el("label", { className: "micro-label", "for": base + "-file", text: t("asset_file") }),
+          el("span", { className: "editor-asset-upload" },
+            el("input", { id: base + "-file", type: "file", "data-asset-file": key,
+              accept: "image/png,image/jpeg,image/gif,image/webp" }),
+            button("upload-asset", bp, t("asset_upload"))),
+          el("p", { className: "field-hint", text: t("asset_hint") })),
+        el("p", { className: "editor-asset-status" + (msg && msg.kind ? " is-" + msg.kind : ""),
+          "data-asset-status": key, role: "status", "aria-live": "polite",
+          text: msg ? t(msg.key, msg.params) : "" })));
+  }
+
+  function uploadAsset(bp) {
+    var block = getPath(bp);
+    if (!block) return;
+    var key = uid(block);
+    var input = document.querySelector('[data-asset-file="' + key + '"]');
+    var file = input && input.files && input.files[0];
+    if (!file) { assetMessage(key, "asset_no_file", null, "error"); return; }
+    if (file.size > MAX_ASSET_BYTES) { assetMessage(key, "asset_too_big", null, "error"); return; }
+    assetMessage(key, "asset_uploading");
+    var form = new FormData();
+    form.append("file", file, file.name);
+    fetch("/api/editor/" + workbookId + "/assets", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-Workbook": "1" },
+      body: form
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        if (response.ok && data.src) {
+          block.src = data.src;  // the block object survives re-renders and moves
+          assetMsgs[key] = { key: "asset_uploaded", params: { name: data.name || data.src }, kind: "ok" };
+          setDirty(true);
+          render();
+          loadAssets();
+        } else if (response.status === 413) {
+          assetMessage(key, "asset_too_big", null, "error");
+        } else if (response.status === 415) {
+          assetMessage(key, "asset_wrong_type", null, "error");
+        } else {
+          assetMessage(key, "asset_failed", null, "error");
+        }
+      });
+    }, function () {
+      assetMessage(key, "asset_network_error", null, "error");
+    });
   }
 
   // ------------------------------------------------------------------ render
@@ -566,6 +692,10 @@
     "preview-task": function (path) {
       preview(path);
       return "no-render";
+    },
+    "upload-asset": function (path) {
+      uploadAsset(path);
+      return "no-render";
     }
   };
 
@@ -587,6 +717,14 @@
       actions["set-layout"](target.getAttribute("data-path"), target.getAttribute("data-value"));
       setDirty(true);
       render();
+      return;
+    }
+    if (target.hasAttribute && target.hasAttribute("data-asset-select")) {
+      if (target.value) {
+        setPath(target.getAttribute("data-asset-select") + ".src", target.value);
+        setDirty(true);
+        render();
+      }
       return;
     }
     update(target, true);
@@ -612,6 +750,7 @@
       var msg = holder.querySelector(".field-error");
       if (msg) msg.remove();
     }
+    if (/\.blocks\.\d+\.(src|alt)$/.test(path)) updateThumb(path.replace(/\.(src|alt)$/, ""));
     if (isChange && input.hasAttribute("data-rerender")) render();
   }
 
@@ -834,6 +973,7 @@
     document.querySelectorAll("[data-editor-save]").forEach(function (b) { b.disabled = false; });
     status(null);
     render();
+    loadAssets();
   }).catch(function () {
     var box = document.querySelector("[data-editor-messages]");
     box.textContent = root.getAttribute("data-text-failed") || "";
