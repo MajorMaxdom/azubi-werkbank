@@ -9,14 +9,14 @@ import typer
 from app.loader import CATALOG_SUFFIXES, load_directory, load_file
 from app.renderer import render_static
 
-app = typer.Typer(help="Workbook server tools.", no_args_is_help=True, add_completion=False)
+app = typer.Typer(help="Azubi-Werkbank tools.", no_args_is_help=True, add_completion=False)
 
 DEFAULT_WORKBOOKS = Path("workbooks")
 
 
 @app.callback()
 def main() -> None:
-    """Workbook server tools."""
+    """Azubi-Werkbank tools."""
 
 
 @app.command()
@@ -91,7 +91,7 @@ user_app = typer.Typer(help="Manage users (users.yaml + credentials).", no_args_
 app.add_typer(user_app, name="user")
 
 ConfigOption = typer.Option(
-    None, "--config", "-c", help="Config file (default: $WORKBOOK_CONFIG or ./config.yaml)."
+    None, "--config", "-c", help="Config file (default: $WERKBANK_CONFIG or ./config.yaml)."
 )
 
 

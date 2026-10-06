@@ -1,4 +1,4 @@
-# Workbook Server — Specification & Work Plan
+# Azubi-Werkbank — Specification & Work Plan
 
 Read `CLAUDE.md` first. This document defines *what* to build and in which order.
 
@@ -136,13 +136,13 @@ users:
   later be swapped for a trusted header from Caddy `forward_auth` (Authentik)
   via a config switch. Do not implement the header mode now, but keep the seam.
 
-### Bootstrap CLI (`workbook`)
-- `workbook user add <username> --name "..." --role trainer|apprentice [--workbook ID ...]`
+### Bootstrap CLI (`werkbank`)
+- `werkbank user add <username> --name "..." --role trainer|apprentice [--workbook ID ...]`
   → adds to `users.yaml`, prints invite link.
-- `workbook user reset <username>` → prints new invite link.
-- `workbook user list`
-- `workbook validate [PATH]` → validates catalogs, exit code 1 on errors.
-- `workbook serve` → runs uvicorn with config.
+- `werkbank user reset <username>` → prints new invite link.
+- `werkbank user list`
+- `werkbank validate [PATH]` → validates catalogs, exit code 1 on errors.
+- `werkbank serve` → runs uvicorn with config.
 
 ---
 
@@ -350,7 +350,7 @@ Rules:
 - All pages that belong to a workbook (workbook view, trainer review view,
   export) use its theme. Pages without a workbook context (login, start page,
   admin) always use the defaults.
-- Static outputs (`workbook render` CLI in 0.1.0 and the export in 1.0.0) inline
+- Static outputs (`werkbank render` CLI in 0.1.0 and the export in 1.0.0) inline
   tokens + theme into the exported file, because they are opened without the server.
 - `/admin/catalogs` shows a **warning** (not an error) when a stylesheet results
   in a WCAG contrast ratio below 4.5:1 for `ink` on `card`, `ink` on `paper`,
@@ -364,7 +364,7 @@ Rules:
 ## 7. Configuration (`config.yaml`)
 
 ```yaml
-base_url: https://arbeitsheft.example.de   # used for invite links and Origin check
+base_url: https://werkbank.example.de   # used for invite links and Origin check
 listen_host: 127.0.0.1
 listen_port: 8000
 paths:
@@ -389,7 +389,7 @@ Provide `config.example.yaml`; `config.yaml` is git-ignored, as are
 
 - `deploy/Caddyfile`:
   ```
-  arbeitsheft.example.de {
+  werkbank.example.de {
   	reverse_proxy 127.0.0.1:8000
   	header {
   		Strict-Transport-Security "max-age=31536000"
@@ -406,12 +406,12 @@ Provide `config.example.yaml`; `config.yaml` is git-ignored, as are
   }
   ```
   (CSP requires no inline scripts/styles in templates — use static files.)
-- `deploy/workbook.service`: dedicated system user `workbook`, `WorkingDirectory`,
+- `deploy/werkbank.service`: dedicated system user `werkbank`, `WorkingDirectory`,
   venv `ExecStart`, `Restart=on-failure`, hardening (`NoNewPrivileges`,
   `ProtectSystem=strict`, `ReadWritePaths=` for progress/data/users.yaml,
   `PrivateTmp`, `ProtectHome`).
 - `deploy/README.md` (English): install steps, DNS + port 80/443 forwarding,
-  first trainer via `workbook user add`, backup of `progress/`, `data/`,
+  first trainer via `werkbank user add`, backup of `progress/`, `data/`,
   `users.yaml` (e.g. restic or nightly git commit), optional fail2ban filter
   for the app's failed-login log line.
 - App logs failed logins as one structured line:
@@ -428,9 +428,9 @@ commit, short summary, STOP.
 - Project skeleton, `pyproject.toml`, ruff config, `locales/de.yaml`, i18n helper.
 - Pydantic catalog models + validation rules (section 2), including the
   `stylesheet` model (section 6a).
-- `workbook validate` CLI.
+- `werkbank validate` CLI.
 - Renderer + templates + CSS (tokens only, no hex outside `tokens.css`) +
-  self-hosted fonts/icons; CLI `workbook render <file> -o out.html` producing a
+  self-hosted fonts/icons; CLI `werkbank render <file> -o out.html` producing a
   static preview with tokens and theme inlined.
 - Convert the reference workbook from `docs/reference/` into
   `workbooks/network-security.yaml` (all days, modules, tasks, hints, bonus,
@@ -481,7 +481,7 @@ commit, short summary, STOP.
 ### 1.0.0 — Export & polish
 - Export endpoint (static HTML snapshot with answers, print CSS, workbook
   theme inlined), JSON Schema
-  export of the catalog model (`workbook schema -o workbook.schema.json`) with
+  export of the catalog model (`werkbank schema -o workbook.schema.json`) with
   instructions for VS Code YAML autocompletion, final docs (`docs/AUTHORING.md`
   in English: how to write a workbook), accessibility pass (labels, focus
   states, contrast).

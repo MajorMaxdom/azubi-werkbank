@@ -152,16 +152,16 @@ def test_caddyfile_has_the_planned_headers():
     assert f'Content-Security-Policy "{CSP_LINE}"' in caddyfile
     for header in ('Strict-Transport-Security "max-age=31536000"', "X-Content-Type-Options nosniff",
                    "X-Frame-Options DENY", "Referrer-Policy no-referrer", "-Server",
-                   "reverse_proxy 127.0.0.1:8000"):  # fmt: skip
+                   "reverse_proxy 127.0.0.1:8000", "werkbank.example.de"):  # fmt: skip
         assert header in caddyfile
 
 
 def test_service_unit_hardening():
-    unit = (ROOT / "deploy" / "workbook.service").read_text(encoding="utf-8")
-    for line in ("User=workbook", "NoNewPrivileges=true", "ProtectSystem=strict",
+    unit = (ROOT / "deploy" / "werkbank.service").read_text(encoding="utf-8")
+    for line in ("User=werkbank", "NoNewPrivileges=true", "ProtectSystem=strict",
                  "ProtectHome=true", "PrivateTmp=true", "Restart=on-failure",
-                 "ReadWritePaths=/var/lib/workbook",
-                 "ExecStart=/opt/workbook/.venv/bin/workbook serve"):  # fmt: skip
+                 "ReadWritePaths=/var/lib/werkbank",
+                 "ExecStart=/opt/werkbank/.venv/bin/werkbank serve"):  # fmt: skip
         assert line in unit
 
 

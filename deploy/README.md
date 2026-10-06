@@ -1,18 +1,18 @@
-# Deployment
+# Deployment — Azubi-Werkbank
 
 Target: Ubuntu 24.04 LTS (Debian 12 works the same way), one server, reachable
-from the internet under a domain such as `arbeitsheft.example.de`. The app runs
-as the unprivileged system user `workbook` on `127.0.0.1:8000`; Caddy
+from the internet under a domain such as `werkbank.example.de`. The app runs
+as the unprivileged system user `werkbank` on `127.0.0.1:8000`; Caddy
 terminates TLS in front of it and obtains the certificate automatically.
 
 | Path | Content | Owner / mode |
 |---|---|---|
-| `/opt/workbook` | code (git checkout) and `.venv` | root, read-only for the service |
-| `/etc/workbook/config.yaml` | configuration | `root:workbook 0640` |
-| `/var/lib/workbook/users.yaml` | user list | `workbook 0600` |
-| `/var/lib/workbook/data/` | `credentials.json`, `secret.key` | `workbook 0700/0600` |
-| `/var/lib/workbook/progress/` | answers per user and workbook | `workbook 0700/0600` |
-| `/var/lib/workbook/workbooks/` | catalogs + `assets/` | `workbook:workbook 2775` |
+| `/opt/werkbank` | code (git checkout) and `.venv` | root, read-only for the service |
+| `/etc/werkbank/config.yaml` | configuration | `root:werkbank 0640` |
+| `/var/lib/werkbank/users.yaml` | user list | `werkbank 0600` |
+| `/var/lib/werkbank/data/` | `credentials.json`, `secret.key` | `werkbank 0700/0600` |
+| `/var/lib/werkbank/progress/` | answers per user and workbook | `werkbank 0700/0600` |
+| `/var/lib/werkbank/workbooks/` | catalogs + `assets/` | `werkbank:werkbank 2775` |
 
 ## 1. DNS and ports
 
@@ -40,39 +40,39 @@ Python 3.11 or newer is required (`python3 --version`).
 ## 3. User and code
 
 ```sh
-sudo useradd --system --home-dir /var/lib/workbook --shell /usr/sbin/nologin workbook
-sudo git clone <repository-url> /opt/workbook          # or copy the project there
-sudo python3 -m venv /opt/workbook/.venv
-sudo /opt/workbook/.venv/bin/pip install --upgrade pip
-sudo /opt/workbook/.venv/bin/pip install -e /opt/workbook
+sudo useradd --system --home-dir /var/lib/werkbank --shell /usr/sbin/nologin werkbank
+sudo git clone <repository-url> /opt/werkbank          # or copy the project there
+sudo python3 -m venv /opt/werkbank/.venv
+sudo /opt/werkbank/.venv/bin/pip install --upgrade pip
+sudo /opt/werkbank/.venv/bin/pip install -e /opt/werkbank
 ```
 
 The editable install (`-e`) is intended: templates, static files and
-`locales/` are read from `/opt/workbook`.
+`locales/` are read from `/opt/werkbank`.
 
 ## 4. Configuration
 
 ```sh
-sudo mkdir -p /etc/workbook
-sudo cp /opt/workbook/config.example.yaml /etc/workbook/config.yaml
-sudo chown root:workbook /etc/workbook/config.yaml
-sudo chmod 0640 /etc/workbook/config.yaml
-sudoedit /etc/workbook/config.yaml
+sudo mkdir -p /etc/werkbank
+sudo cp /opt/werkbank/config.example.yaml /etc/werkbank/config.yaml
+sudo chown root:werkbank /etc/werkbank/config.yaml
+sudo chmod 0640 /etc/werkbank/config.yaml
+sudoedit /etc/werkbank/config.yaml
 ```
 
 Set at least these keys (absolute paths, because the config file does not live
 next to the data):
 
 ```yaml
-base_url: https://arbeitsheft.example.de
+base_url: https://werkbank.example.de
 listen_host: 127.0.0.1
 listen_port: 8000
 paths:
-  workbooks: /var/lib/workbook/workbooks
-  progress: /var/lib/workbook/progress
-  users: /var/lib/workbook/users.yaml
-  data: /var/lib/workbook/data
-  locales: /opt/workbook/locales
+  workbooks: /var/lib/werkbank/workbooks
+  progress: /var/lib/werkbank/progress
+  users: /var/lib/werkbank/users.yaml
+  data: /var/lib/werkbank/data
+  locales: /opt/werkbank/locales
 secure_cookies: true
 ```
 
@@ -83,40 +83,40 @@ of every form and autosave request.
 ## 5. State directory and catalogs
 
 ```sh
-sudo install -d -o workbook -g workbook -m 0750 /var/lib/workbook
-sudo install -d -o workbook -g workbook -m 2775 /var/lib/workbook/workbooks /var/lib/workbook/workbooks/assets
-sudo cp /opt/workbook/workbooks/network-security.yaml /var/lib/workbook/workbooks/
-sudo cp /opt/workbook/workbooks/_template.yaml /var/lib/workbook/workbooks/
-sudo chown workbook:workbook /var/lib/workbook/workbooks/*.yaml
-sudo -u workbook /opt/workbook/.venv/bin/workbook validate /var/lib/workbook/workbooks
+sudo install -d -o werkbank -g werkbank -m 0750 /var/lib/werkbank
+sudo install -d -o werkbank -g werkbank -m 2775 /var/lib/werkbank/workbooks /var/lib/werkbank/workbooks/assets
+sudo cp /opt/werkbank/workbooks/network-security.yaml /var/lib/werkbank/workbooks/
+sudo cp /opt/werkbank/workbooks/_template.yaml /var/lib/werkbank/workbooks/
+sudo chown werkbank:werkbank /var/lib/werkbank/workbooks/*.yaml
+sudo -u werkbank /opt/werkbank/.venv/bin/werkbank validate /var/lib/werkbank/workbooks
 ```
 
-Catalog authors are added to the `workbook` group
-(`sudo usermod -aG workbook <login>`, then log in again) and edit the files in
-`/var/lib/workbook/workbooks/` directly. The server picks up every change within
+Catalog authors are added to the `werkbank` group
+(`sudo usermod -aG werkbank <login>`, then log in again) and edit the files in
+`/var/lib/werkbank/workbooks/` directly. The server picks up every change within
 about a second; broken files keep their last valid version and the error is
 shown on `/admin/catalogs`. See `docs/workbook-template.yaml` for all fields.
 Fachbetreuer can also use the form editor in the browser (`/admin/editor`);
 it writes to the same directory and keeps the last 10 versions of every file
-in `/var/lib/workbook/workbooks/_backups/`.
+in `/var/lib/werkbank/workbooks/_backups/`.
 
 ## 6. Service
 
 ```sh
-sudo cp /opt/workbook/deploy/workbook.service /etc/systemd/system/
+sudo cp /opt/werkbank/deploy/werkbank.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now workbook
-systemctl status workbook
+sudo systemctl enable --now werkbank
+systemctl status werkbank
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/login   # 200
 ```
 
-Logs: `journalctl -u workbook -f`.
+Logs: `journalctl -u werkbank -f`.
 
 ## 7. Caddy
 
 ```sh
-sudo cp /opt/workbook/deploy/Caddyfile /etc/caddy/Caddyfile
-sudoedit /etc/caddy/Caddyfile        # replace arbeitsheft.example.de with your domain
+sudo cp /opt/werkbank/deploy/Caddyfile /etc/caddy/Caddyfile
+sudoedit /etc/caddy/Caddyfile        # replace werkbank.example.de with your domain
 sudo install -d -o caddy -g caddy /var/log/caddy
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
@@ -128,52 +128,52 @@ certificate.
 ## 8. First Fachbetreuer
 
 ```sh
-sudo -u workbook WORKBOOK_CONFIG=/etc/workbook/config.yaml \
-  /opt/workbook/.venv/bin/workbook user add mmustermann --name "Max Mustermann" --role trainer
+sudo -u werkbank WERKBANK_CONFIG=/etc/werkbank/config.yaml \
+  /opt/werkbank/.venv/bin/werkbank user add mmustermann --name "Max Mustermann" --role trainer
 ```
 
 Open the printed invite link, set a password (at least 12 characters) and
 create all further users in the browser under **Nutzer**. The same CLI offers
-`workbook user list` and `workbook user reset <username>` (new invite link, all
+`werkbank user list` and `werkbank user reset <username>` (new invite link, all
 sessions end). A convenient alias for admins:
 
 ```sh
-alias workbook='sudo -u workbook WORKBOOK_CONFIG=/etc/workbook/config.yaml /opt/workbook/.venv/bin/workbook'
+alias werkbank='sudo -u werkbank WERKBANK_CONFIG=/etc/werkbank/config.yaml /opt/werkbank/.venv/bin/werkbank'
 ```
 
 ## 9. Backups
 
-Back up `/var/lib/workbook` (users, credentials, secret key, progress,
-catalogs) and `/etc/workbook`. Files are written atomically, so copying them
+Back up `/var/lib/werkbank` (users, credentials, secret key, progress,
+catalogs) and `/etc/werkbank`. Files are written atomically, so copying them
 while the service runs is safe. Two simple options:
 
 **restic** (encrypted, deduplicated, e.g. to a NAS or S3):
 
 ```sh
-sudo restic -r /mnt/backup/workbook init
-# /etc/cron.d/workbook-backup
-15 2 * * * root restic -r /mnt/backup/workbook --password-file /root/.restic-pw backup /var/lib/workbook /etc/workbook && restic -r /mnt/backup/workbook --password-file /root/.restic-pw forget --keep-daily 14 --keep-weekly 8 --prune
+sudo restic -r /mnt/backup/werkbank init
+# /etc/cron.d/werkbank-backup
+15 2 * * * root restic -r /mnt/backup/werkbank --password-file /root/.restic-pw backup /var/lib/werkbank /etc/werkbank && restic -r /mnt/backup/werkbank --password-file /root/.restic-pw forget --keep-daily 14 --keep-weekly 8 --prune
 ```
 
 **Nightly git commit** (history of every answer; keep the repository private,
 it contains password hashes):
 
 ```sh
-sudo -u workbook git -C /var/lib/workbook init
-# /etc/cron.d/workbook-git
-30 2 * * * workbook cd /var/lib/workbook && git add -A && git commit -qm "nightly $(date -I)" || true
+sudo -u werkbank git -C /var/lib/werkbank init
+# /etc/cron.d/werkbank-git
+30 2 * * * werkbank cd /var/lib/werkbank && git add -A && git commit -qm "nightly $(date -I)" || true
 ```
 
-Restore = stop the service, put the files back (keep owner `workbook` and the
+Restore = stop the service, put the files back (keep owner `werkbank` and the
 modes from the table above), start the service.
 
 ## 10. Updates
 
 ```sh
-cd /opt/workbook
+cd /opt/werkbank
 sudo git pull
-sudo /opt/workbook/.venv/bin/pip install -e /opt/workbook
-sudo systemctl restart workbook
+sudo /opt/werkbank/.venv/bin/pip install -e /opt/werkbank
+sudo systemctl restart werkbank
 ```
 
 Read `CHANGELOG.md` before updating. Catalog and user changes never need a
@@ -188,10 +188,10 @@ limits 20 failures per IP in 15 minutes; fail2ban adds a firewall ban:
 
 ```sh
 sudo apt install -y fail2ban
-sudo cp /opt/workbook/deploy/fail2ban-filter.conf /etc/fail2ban/filter.d/workbook.conf
-sudo cp /opt/workbook/deploy/fail2ban-jail.conf /etc/fail2ban/jail.d/workbook.conf
+sudo cp /opt/werkbank/deploy/fail2ban-filter.conf /etc/fail2ban/filter.d/werkbank.conf
+sudo cp /opt/werkbank/deploy/fail2ban-jail.conf /etc/fail2ban/jail.d/werkbank.conf
 sudo systemctl restart fail2ban
-sudo fail2ban-client status workbook
+sudo fail2ban-client status werkbank
 ```
 
 ## Troubleshooting
@@ -203,6 +203,6 @@ sudo fail2ban-client status workbook
   `secure_cookies: true`; always use the HTTPS address via Caddy.
 - **`/admin/catalogs` shows errors** — fix the file; the previous valid version
   stays online meanwhile.
-- **Service does not start** — `journalctl -u workbook -e`; check that
-  `/etc/workbook/config.yaml` is readable by the group `workbook` and that the
+- **Service does not start** — `journalctl -u werkbank -e`; check that
+  `/etc/werkbank/config.yaml` is readable by the group `werkbank` and that the
   paths exist.

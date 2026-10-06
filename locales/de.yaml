@@ -150,7 +150,8 @@ signoff:
   done: "Abgenommen am {date}"
 
 app:
-  name: Arbeitshefte
+  name: Azubi-Werkbank
+  notice: Hinweis
 
 a11y:
   skip: Zum Inhalt springen

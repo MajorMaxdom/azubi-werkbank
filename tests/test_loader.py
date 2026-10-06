@@ -174,7 +174,7 @@ def test_committed_json_schema_is_up_to_date():
     from app.models.catalog import catalog_json_schema
 
     committed = (ROOT / "docs" / "workbook.schema.json").read_text(encoding="utf-8")
-    assert committed == catalog_json_schema(), "run: workbook schema -o docs/workbook.schema.json"
+    assert committed == catalog_json_schema(), "run: werkbank schema -o docs/workbook.schema.json"
 
 
 def test_cli_schema(tmp_path):

@@ -1,6 +1,6 @@
-# Workbook Server
+# Azubi-Werkbank
 
-A small self-hosted web server that turns YAML/JSON task catalogs
+**Azubi-Werkbank** is a small self-hosted web server that turns YAML/JSON task catalogs
 ("Arbeitshefte") for IT apprentices into interactive German web pages.
 Apprentices log in, answer tasks and tick them off — everything is saved
 automatically. Their Fachbetreuer (trainers) review each task, comment, and
@@ -23,9 +23,9 @@ sign off the workbook. No database, no Docker, no frontend build step.
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
-.venv/bin/workbook validate                 # check workbooks/
-.venv/bin/workbook user add mmustermann --name "Max Mustermann" --role trainer
-.venv/bin/workbook serve                    # http://127.0.0.1:8000
+.venv/bin/werkbank validate                 # check workbooks/
+.venv/bin/werkbank user add mmustermann --name "Max Mustermann" --role trainer
+.venv/bin/werkbank serve                    # http://127.0.0.1:8000
 .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/pytest
 ```
 
@@ -37,11 +37,11 @@ For plain-HTTP testing on another host, create `config.yaml` (see
 
 | Command | Purpose |
 |---|---|
-| `workbook serve` | run the server |
-| `workbook validate [PATH]` | validate catalogs (exit code 1 on errors) |
-| `workbook render FILE -o OUT.html` | offline preview of a catalog |
-| `workbook schema -o FILE` | JSON Schema for editor autocompletion |
-| `workbook user add/reset/list` | manage users and invite links |
+| `werkbank serve` | run the server |
+| `werkbank validate [PATH]` | validate catalogs (exit code 1 on errors) |
+| `werkbank render FILE -o OUT.html` | offline preview of a catalog |
+| `werkbank schema -o FILE` | JSON Schema for editor autocompletion |
+| `werkbank user add/reset/list` | manage users and invite links |
 
 ## Documentation
 

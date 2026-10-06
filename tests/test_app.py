@@ -421,6 +421,7 @@ def test_broadcaster_publish_from_thread():
 
 
 def test_config_defaults_and_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("WERKBANK_CONFIG", raising=False)
     monkeypatch.delenv("WORKBOOK_CONFIG", raising=False)
     monkeypatch.chdir(tmp_path)
     default = load_config()
@@ -439,3 +440,26 @@ def test_config_defaults_and_file(tmp_path, monkeypatch):
         load_config(cfg)
     with pytest.raises(FileNotFoundError):
         load_config(tmp_path / "missing.yaml")
+
+
+@pytest.mark.parametrize("variable", ["WERKBANK_CONFIG", "WORKBOOK_CONFIG"])
+def test_config_from_environment(tmp_path, monkeypatch, variable):
+    monkeypatch.delenv("WERKBANK_CONFIG", raising=False)
+    monkeypatch.delenv("WORKBOOK_CONFIG", raising=False)
+    cfg = tmp_path / "werkbank.yaml"
+    cfg.write_text("listen_port: 9123\n")
+    monkeypatch.setenv(variable, str(cfg))
+    assert load_config().listen_port == 9123
+    monkeypatch.setenv(variable, str(tmp_path / "missing.yaml"))
+    with pytest.raises(FileNotFoundError):
+        load_config()
+
+
+def test_product_name_in_titles_and_top_bar(config):
+    write(config, "a.yaml", VALID_YAML)
+    with open_client(config, "boss") as client:
+        index = client.get("/").text
+        page = client.get("/workbooks/demo").text
+    assert "<title>Arbeitshefte · Azubi-Werkbank</title>" in index
+    assert '<a class="brand" href="/">Azubi-Werkbank</a>' in index
+    assert "<title>Demo · Azubi-Werkbank</title>" in page

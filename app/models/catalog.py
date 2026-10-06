@@ -428,15 +428,15 @@ def catalog_json_schema() -> str:
     """JSON Schema of the catalog format, for editor autocompletion and checks.
 
     Covers structure, types, enums and formats. Cross-references (unique ids,
-    level keys, blocks vs. fixed fields) are checked by ``workbook validate``.
+    level keys, blocks vs. fixed fields) are checked by ``werkbank validate``.
     """
     import json
 
     schema = Catalog.model_json_schema()
     schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Workbook catalog",
-        "description": "Task catalog for the workbook server (see docs/AUTHORING.md).",
+        "title": "Azubi-Werkbank workbook catalog",
+        "description": "Task catalog for Azubi-Werkbank (see docs/AUTHORING.md).",
         **schema,
     }
     return json.dumps(schema, indent=2, ensure_ascii=False) + "\n"

@@ -1,11 +1,11 @@
-# Workbook server configuration. Copy to config.yaml (development) or
-# /etc/workbook/config.yaml (production, see deploy/README.md) and adjust.
+# Azubi-Werkbank configuration. Copy to config.yaml (development) or
+# /etc/werkbank/config.yaml (production, see deploy/README.md) and adjust.
 # Every key is optional; the values below are the defaults unless noted.
 # Relative paths are resolved against the directory of this file.
 
 # Public URL of the site. Used for invite links and the same-origin check
 # (browsers must send exactly this scheme://host[:port] as Origin).
-base_url: https://arbeitsheft.example.de        # default: http://127.0.0.1:8000
+base_url: https://werkbank.example.de        # default: http://127.0.0.1:8000
 
 # The app only ever listens on localhost; Caddy terminates TLS in front of it.
 listen_host: 127.0.0.1

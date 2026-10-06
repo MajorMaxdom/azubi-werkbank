@@ -11,7 +11,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ruamel.yaml import YAML
 
-CONFIG_ENV = "WORKBOOK_CONFIG"
+CONFIG_ENV = "WERKBANK_CONFIG"
+LEGACY_CONFIG_ENV = "WORKBOOK_CONFIG"  # deprecated name, still read
 DEFAULT_CONFIG_FILE = Path("config.yaml")
 
 
@@ -67,14 +68,15 @@ class Config(BaseModel):
 
 
 def load_config(path: Path | None = None) -> Config:
-    """Load the config file named by ``path``, $WORKBOOK_CONFIG or ./config.yaml.
+    """Load the config file named by ``path``, $WERKBANK_CONFIG or ./config.yaml.
 
     Relative paths inside the config are resolved against the config file's
     directory (or the current directory when no file exists).
     """
-    explicit = path is not None or bool(os.environ.get(CONFIG_ENV))
+    from_env = os.environ.get(CONFIG_ENV) or os.environ.get(LEGACY_CONFIG_ENV)
+    explicit = path is not None or bool(from_env)
     if path is None:
-        path = Path(os.environ.get(CONFIG_ENV) or DEFAULT_CONFIG_FILE)
+        path = Path(from_env or DEFAULT_CONFIG_FILE)
     if path.is_file():
         data = YAML(typ="safe").load(path.read_text(encoding="utf-8")) or {}
         return Config.model_validate(data).resolve_paths(path.resolve().parent)

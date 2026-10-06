@@ -190,7 +190,7 @@ def test_create_blank_workbook(config):
         assert boss.get("/admin/editor/neu").status_code == 200
         assert "Neues Heft" in boss.get("/").text
     text = (config.paths.workbooks / "neu.yaml").read_text()
-    assert text.startswith("# Workbook catalog — edited with the form editor")
+    assert text.startswith("# Azubi-Werkbank workbook — edited with the form editor")
     assert "id: neu" in text and "version: 1.0.0" in text
 
 

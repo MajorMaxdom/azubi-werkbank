@@ -71,7 +71,7 @@ def utcnow() -> datetime:
 
 
 USERS_HEADER = """\
-# Users of the workbook server. Human-editable; the app keeps comments.
+# Users of Azubi-Werkbank. Human-editable; the app keeps comments.
 # Roles: trainer (Fachbetreuer) | apprentice. See docs/PLAN.md section 3.
 """
 

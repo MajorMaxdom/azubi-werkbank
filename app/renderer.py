@@ -339,7 +339,7 @@ def render_static(
 ) -> str:
     """Render a self-contained HTML file with tokens, theme and fonts inlined.
 
-    Without ``export`` this is the authoring preview (``workbook render``).
+    Without ``export`` this is the authoring preview (``werkbank render``).
     With ``export`` it is a print-friendly snapshot of one user's answers.
     ``names`` maps usernames to display names (authors of messages and reviews).
     """

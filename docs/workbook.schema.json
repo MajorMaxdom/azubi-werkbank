@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Catalog",
-  "description": "Task catalog for the workbook server (see docs/AUTHORING.md).",
+  "description": "Task catalog for Azubi-Werkbank (see docs/AUTHORING.md).",
   "$defs": {
     "Answer": {
       "additionalProperties": false,

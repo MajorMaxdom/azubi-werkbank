@@ -4,7 +4,22 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.5.1] - 2026-10-06
+## [1.6.0] - 2026-10-06
+
+### Changed
+- The product is called **Azubi-Werkbank**: top bar, page titles
+  (`<page> · Azubi-Werkbank`), README and docs.
+- Technical short name `werkbank`: CLI command `werkbank` (was `workbook`),
+  Python distribution `azubi-werkbank`, systemd unit `deploy/werkbank.service`,
+  system user/group `werkbank`, paths `/opt/werkbank`, `/etc/werkbank`,
+  `/var/lib/werkbank`, fail2ban filter/jail `werkbank`, example domain
+  `werkbank.example.de`.
+- Config environment variable `WERKBANK_CONFIG`; `WORKBOOK_CONFIG` is still
+  read as a fallback.
+- Unchanged on purpose: the catalog term "workbook" in code, the `workbooks/`
+  directory, the `X-Workbook` API header and export file names.
+
+ - 2026-10-06
 
 ### Fixed
 - Dates and times were shown in the server's time zone (usually UTC, i.e.

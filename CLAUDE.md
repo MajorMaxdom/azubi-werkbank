@@ -1,7 +1,8 @@
-# CLAUDE.md — Workbook Server
+# CLAUDE.md — Azubi-Werkbank
 
 ## What this project is
-A small self-hosted web server that turns human-readable YAML/JSON task catalogs
+Azubi-Werkbank (technical short name `werkbank`) is a small self-hosted web
+server that turns human-readable YAML/JSON task catalogs
 ("workbooks") for IT apprentices into interactive HTML pages. Each user logs in,
 answers tasks, ticks them off, and their progress is autosaved to a per-user file.
 Trainers review answers and sign off.
@@ -61,7 +62,7 @@ app/
   api/               route modules (pages, progress, admin, auth)
   templates/         Jinja2 templates
   static/            css/, js/, fonts/, icons/
-cli.py               `workbook` CLI entry point
+cli.py               `werkbank` CLI entry point
 workbooks/           catalogs (*.yaml, *.json; files starting with "_" ignored)
 workbooks/assets/    images referenced by catalogs
 progress/            progress/<workbook-id>/<username>.json

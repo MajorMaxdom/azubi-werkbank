@@ -50,10 +50,10 @@ writing YAML directly.
 ## Quick start
 
 ```sh
-cp docs/workbook-template.yaml workbooks/my-topic.yaml   # in production: /var/lib/workbook/workbooks/
+cp docs/workbook-template.yaml workbooks/my-topic.yaml   # in production: /var/lib/werkbank/workbooks/
 # edit: workbook.id, title, levels, days ...
-workbook validate workbooks/my-topic.yaml                 # exit code 1 on errors
-workbook render workbooks/my-topic.yaml -o preview.html   # offline preview incl. trainer area
+werkbank validate workbooks/my-topic.yaml                 # exit code 1 on errors
+werkbank render workbooks/my-topic.yaml -o preview.html   # offline preview incl. trainer area
 ```
 
 Then open `/admin/catalogs` in the browser: every file is listed with its
@@ -219,18 +219,18 @@ For files outside the repository (e.g. on the server), put this first line in
 the catalog:
 
 ```yaml
-# yaml-language-server: $schema=/opt/workbook/docs/workbook.schema.json
+# yaml-language-server: $schema=/opt/werkbank/docs/workbook.schema.json
 ```
 
 Regenerate the schema after changing the models:
-`workbook schema -o docs/workbook.schema.json`. The schema checks structure
+`werkbank schema -o docs/workbook.schema.json`. The schema checks structure
 and formats; rules that span the whole file (unique ids, level references,
-blocks vs. fixed fields) are checked by `workbook validate`.
+blocks vs. fixed fields) are checked by `werkbank validate`.
 
 ## Checklist before publishing
 
-1. `workbook validate` passes.
-2. `workbook render ... -o preview.html` looks right, including hints, bonus
+1. `werkbank validate` passes.
+2. `werkbank render ... -o preview.html` looks right, including hints, bonus
    and trainer area.
 3. No contrast warning on `/admin/catalogs`.
 4. Every task has a `level`, a `duration` and at least one answer field.

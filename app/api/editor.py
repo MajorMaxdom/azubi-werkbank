@@ -45,7 +45,9 @@ Trainer = Annotated[Identity, Depends(require_trainer)]
 _ID_RE = re.compile(ID_PATTERN)
 # Path segments of the editor API that must never be workbook ids.
 RESERVED_IDS = {"preview", "strings"}
-NEW_FILE_HEADER = "# Workbook catalog — edited with the form editor; see docs/AUTHORING.md.\n"
+NEW_FILE_HEADER = (
+    "# Azubi-Werkbank workbook — edited with the form editor; see docs/AUTHORING.md.\n"
+)
 
 
 def _entry(request: Request, workbook_id: str):
