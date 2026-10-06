@@ -41,10 +41,19 @@ Python 3.11 or newer is required (`python3 --version`).
 
 ```sh
 sudo useradd --system --home-dir /var/lib/werkbank --shell /usr/sbin/nologin werkbank
-sudo git clone <repository-url> /opt/werkbank          # or copy the project there
+sudo git clone <repository-url> /opt/werkbank          # see below without a remote
 sudo python3 -m venv /opt/werkbank/.venv
 sudo /opt/werkbank/.venv/bin/pip install --upgrade pip
 sudo /opt/werkbank/.venv/bin/pip install -e /opt/werkbank
+```
+
+Without a git remote, bundle the repository on the development machine and
+clone from the bundle:
+
+```sh
+git -C /path/to/azubi-werkbank bundle create /tmp/werkbank.bundle --all   # dev machine
+scp /tmp/werkbank.bundle <server>:/tmp/                                   # copy
+sudo git clone /tmp/werkbank.bundle /opt/werkbank                         # server
 ```
 
 The editable install (`-e`) is intended: templates, static files and
@@ -74,6 +83,7 @@ paths:
   data: /var/lib/werkbank/data
   locales: /opt/werkbank/locales
 secure_cookies: true
+timezone: Europe/Berlin
 ```
 
 `base_url` must be exactly the address users type in the browser (scheme and
@@ -150,6 +160,7 @@ while the service runs is safe. Two simple options:
 **restic** (encrypted, deduplicated, e.g. to a NAS or S3):
 
 ```sh
+sudo apt install -y restic
 sudo restic -r /mnt/backup/werkbank init
 # /etc/cron.d/werkbank-backup
 15 2 * * * root restic -r /mnt/backup/werkbank --password-file /root/.restic-pw backup /var/lib/werkbank /etc/werkbank && restic -r /mnt/backup/werkbank --password-file /root/.restic-pw forget --keep-daily 14 --keep-weekly 8 --prune
