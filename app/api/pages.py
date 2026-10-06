@@ -316,11 +316,19 @@ def _rows(request, view, progress, user, username_for_link, task_ids=None) -> li
     return rows
 
 
+# Filter -> task states shown. "open" means "work to do" for the role.
+TASK_FILTERS = {
+    "apprentice": {"open": {"open", "redo"}, "ok": {"ok"}, "redo": {"redo"}},
+    "trainer": {"open": {"waiting", "recheck"}, "ok": {"ok"}, "redo": {"redo"}},
+}
+
+
 @router.get("/my-tasks", response_class=HTMLResponse)
 def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HTMLResponse:
     registry = request.app.state.registry
     store = request.app.state.progress
-    only_open = filter == "open"
+    states = TASK_FILTERS[identity.user.role].get(filter)
+    active = filter if states else "all"
     groups: list[TaskGroup] = []
     if identity.user.role == "apprentice":
         for wid in registry.catalogs():
@@ -329,8 +337,8 @@ def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HT
                 continue
             progress = store.load(wid, identity.username)
             rows = _rows(request, view, progress, identity.user, None)
-            if only_open:
-                rows = [r for r in rows if r.state in ("open", "redo")]
+            if states:
+                rows = [r for r in rows if r.state in states]
             groups.append(
                 TaskGroup(
                     title=view.meta.title,
@@ -344,8 +352,8 @@ def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HT
         for a in assignments_for(request, identity.username):
             progress = store.load(a.view.meta.id, a.username)
             rows = _rows(request, a.view, progress, a.user, a.username, set(a.tasks))
-            if only_open:
-                rows = [r for r in rows if r.state in ("waiting", "recheck")]
+            if states:
+                rows = [r for r in rows if r.state in states]
             groups.append(
                 TaskGroup(
                     title=f"{a.user.name} · {a.view.meta.title}",
@@ -355,4 +363,4 @@ def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HT
                     total=a.pv.total,
                 )
             )
-    return render(request, "my_tasks.html", groups=groups, only_open=only_open)
+    return render(request, "my_tasks.html", groups=groups, active=active)

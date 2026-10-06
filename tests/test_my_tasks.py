@@ -69,3 +69,30 @@ def test_trainer_sees_only_own_responsibilities(config):
 def test_my_tasks_requires_login(config):
     with open_client(config) as client:
         assert client.get("/my-tasks", follow_redirects=False).status_code == 303
+
+
+def test_status_filters(config):
+    with open_client(config, "boss") as boss:
+        anna = second_client(boss, "anna")
+        kai = second_client(boss, "kai")
+        anna.patch(f"{API}/tasks/t1", json={"done": True}, headers=JSON_HEADERS)
+        anna.patch(f"{API}/tasks/t2", json={"done": True}, headers=JSON_HEADERS)
+        boss.patch(f"{API}/users/anna/tasks/t1/review", json={"status": "ok"}, headers=JSON_HEADERS)
+        kai.patch(
+            f"{API}/users/anna/tasks/t2/review", json={"status": "redo"}, headers=JSON_HEADERS
+        )
+
+        ok = anna.get("/my-tasks?filter=ok").text
+        assert "task-t1" in ok and "task-t2" not in ok
+        assert '<a href="/my-tasks?filter=ok" aria-current="page">Geprüft – OK</a>' in ok
+        redo = anna.get("/my-tasks?filter=redo").text
+        assert "task-t2" in redo and "task-t1" not in redo
+
+        assert "task-t1" in boss.get("/my-tasks?filter=ok").text
+        assert "Keine Aufgaben mit diesem Status." in boss.get("/my-tasks?filter=redo").text
+        assert "task-t2" in kai.get("/my-tasks?filter=redo").text
+
+        # Unknown filter values fall back to "Alle".
+        fallback = anna.get("/my-tasks?filter=<x>").text
+        assert '<a href="/my-tasks" aria-current="page">Alle</a>' in fallback
+        assert "task-t1" in fallback and "task-t2" in fallback

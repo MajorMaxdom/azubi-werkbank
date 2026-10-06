@@ -96,6 +96,8 @@ my_tasks:
   filter_all: Alle
   filter_open: Offen und Nacharbeiten
   filter_open_trainer: Nur zu prüfen
+  filter_ok: Geprüft – OK
+  filter_redo: Nacharbeiten
   number: Nr.
   task: Aufgabe
   status: Status
@@ -103,6 +105,7 @@ my_tasks:
   supervisor: Fachbetreuer
   no_supervisor: —
   nothing_open: Hier ist gerade nichts offen.
+  nothing_found: Keine Aufgaben mit diesem Status.
   state_open: offen
   state_waiting: erledigt – wartet auf Prüfung
   state_recheck: geändert – erneut prüfen

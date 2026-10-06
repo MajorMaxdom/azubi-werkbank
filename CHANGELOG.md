@@ -4,7 +4,13 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] - 2026-10-06
+## [1.2.1] - 2026-10-06
+
+### Added
+- "Meine Aufgaben": filters "Geprüft – OK" and "Nacharbeiten" next to
+  "Alle" and "Nur zu prüfen" / "Offen und Nacharbeiten".
+
+ - 2026-10-06
 
 ### Added
 - Form editor for Fachbetreuer (`/admin/editor`, "Editor" in the top bar):

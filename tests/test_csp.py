@@ -99,7 +99,7 @@ def pages(tmp_path):
         for path in ["/", "/workbooks/demo", "/workbooks/themed", "/workbooks/network-security",
                      "/workbooks/demo/users/anna", "/admin/overview", "/admin/users",
                      "/admin/users/anna", "/admin/catalogs", "/nope", "/my-tasks",
-                     "/my-tasks?filter=open", "/admin/editor", "/admin/editor/demo"]:  # fmt: skip
+                     "/my-tasks?filter=open", "/my-tasks?filter=ok", "/my-tasks?filter=redo", "/admin/editor", "/admin/editor/demo"]:  # fmt: skip
             result[f"boss {path}"] = boss.get(path).text
         for path in ["/", "/workbooks/demo", "/workbooks/network-security", "/admin/users",
                      "/my-tasks"]:  # fmt: skip

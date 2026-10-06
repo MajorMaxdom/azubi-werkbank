@@ -887,7 +887,7 @@ details.overrides .table-wrap { margin: 0; padding: 0 12px 12px; }
 
 /* ---------------------------------------------------------------- my tasks */
 
-.filter-tabs { display: flex; gap: 4px; margin: 0 0 24px; border-bottom: 1px solid var(--line); }
+.filter-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 24px; border-bottom: 1px solid var(--line); }
 .filter-tabs a {
   padding: 8px 12px;
   font-size: 14px;

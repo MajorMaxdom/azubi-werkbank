@@ -4,8 +4,10 @@
 <h1 class="page-title">{{ t('my_tasks.title') }}</h1>
 <p class="page-intro">{{ t('my_tasks.intro_trainer') if identity.is_trainer else t('my_tasks.intro_apprentice') }}</p>
 <nav class="filter-tabs" aria-label="{{ t('my_tasks.filter') }}">
-  <a href="/my-tasks"{% if not only_open %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_all') }}</a>
-  <a href="/my-tasks?filter=open"{% if only_open %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_open_trainer') if identity.is_trainer else t('my_tasks.filter_open') }}</a>
+  <a href="/my-tasks"{% if active == 'all' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_all') }}</a>
+  <a href="/my-tasks?filter=open"{% if active == 'open' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_open_trainer') if identity.is_trainer else t('my_tasks.filter_open') }}</a>
+  <a href="/my-tasks?filter=ok"{% if active == 'ok' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_ok') }}</a>
+  <a href="/my-tasks?filter=redo"{% if active == 'redo' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_redo') }}</a>
 </nav>
 {% for g in groups %}
 <section class="task-group">
@@ -39,7 +41,7 @@
     </table>
   </div>
   {% else %}
-  <p class="empty">{{ t('my_tasks.nothing_open') }}</p>
+  <p class="empty">{{ t('my_tasks.nothing_open') if active == 'open' else t('my_tasks.nothing_found') }}</p>
   {% endif %}
 </section>
 {% else %}
