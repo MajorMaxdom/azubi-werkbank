@@ -28,9 +28,11 @@ in the top bar (`/admin/editor`).
   (checked by the file content, not the name; no SVG). File names are
   lowercased and transliterated (`Größe.PNG` → `groesse.png`); an existing
   file is never overwritten (`-2`, `-3` … is appended). The image is part of
-  the workbook only after **Speichern**. Unused images can be removed via
-  `DELETE /api/editor/<workbook-id>/assets/<name>` (refused while an image
-  block of a loaded workbook still uses it) or directly on disk.
+  the workbook only after **Speichern**. **Bilder verwalten** (link at the top
+  of the editor) lists every image of the workbook with thumbnail, size and
+  where it is used; unused images can be deleted one by one or all at once.
+  Images that an image block or any task text still refers to cannot be
+  deleted.
 - **Saving** validates the whole workbook first; problems are listed and
   marked at the field. The previous file is copied to
   `workbooks/_backups/` (last 10 versions per workbook), then the YAML is
