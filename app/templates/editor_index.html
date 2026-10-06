@@ -1,0 +1,62 @@
+{% extends "page.html" %}
+{% block title %}{{ t('editor.title') }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('editor.title') }}</h1>
+<p class="page-intro">{{ t('editor.intro') }}</p>
+{% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ t('admin.catalogs.workbook') }}</th>
+        <th scope="col">{{ t('admin.catalogs.file') }}</th>
+        <th scope="col">{{ t('admin.catalogs.version') }}</th>
+        <th scope="col">{{ t('admin.users.actions') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in entries %}
+      <tr>
+        <td>{% if entry.catalog %}{{ entry.catalog.workbook.title }} <span class="mono muted">{{ entry.catalog.workbook.id }}</span>{% else %}{{ t('admin.catalogs.never') }}{% endif %}</td>
+        <td class="mono">{{ entry.path.name }}</td>
+        <td class="mono">{{ entry.catalog.workbook.version if entry.catalog else '' }}</td>
+        <td>
+          {% if entry.catalog and not entry.conflict %}
+          <a class="button button-quiet" href="/admin/editor/{{ entry.catalog.workbook.id }}">{{ t('editor.edit') }}</a>
+          {% if entry.errors %}<span class="field-hint">{{ t('editor.has_errors') }}</span>{% endif %}
+          {% else %}
+          <span class="field-hint">{{ t('editor.not_editable') }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">{{ t('admin.catalogs.empty') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<form method="post" action="/admin/editor" class="panel form-stack create-user">
+  <h2 class="section-title">{{ t('editor.new_heading') }}</h2>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="field-grid">
+    <div class="field">
+      <label class="micro-label" for="new-title">{{ t('editor.new_title') }}</label>
+      <input id="new-title" name="title" type="text" value="{{ form.title }}" required>
+    </div>
+    <div class="field">
+      <label class="micro-label" for="new-id">{{ t('editor.new_id') }}</label>
+      <input id="new-id" name="id" type="text" class="mono-input" value="{{ form.id }}" pattern="[a-z0-9][a-z0-9-]{0,62}" autocapitalize="none" spellcheck="false" required>
+      <p class="field-hint">{{ t('editor.new_id_hint') }}</p>
+    </div>
+  </div>
+  <div class="field">
+    <label class="micro-label" for="new-source">{{ t('editor.new_source') }}</label>
+    <select id="new-source" name="source">
+      <option value="">{{ t('editor.new_blank') }}</option>
+      {% for wid, cat in catalogs.items() %}<option value="{{ wid }}"{% if form.source == wid %} selected{% endif %}>{{ t('editor.new_copy', title=cat.workbook.title) }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="button">{{ t('editor.create') }}</button>
+</form>
+{% endblock %}

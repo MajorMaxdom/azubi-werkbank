@@ -736,6 +736,16 @@ def verify_json_api(request: Request) -> None:
         raise CsrfFailed
 
 
+def verify_json_api_any(request: Request) -> None:
+    """JSON API that also has GET endpoints: reads need ``X-Workbook: 1`` (browsers
+    send no Origin on same-origin GET), writes need the full check."""
+    if request.method in ("GET", "HEAD"):
+        if request.headers.get("x-workbook") != "1":
+            raise CsrfFailed
+        return
+    verify_json_api(request)
+
+
 def csrf_token_for(request: Request) -> str:
     return request.app.state.sessions.csrf_token(request.state.csrf_value)
 

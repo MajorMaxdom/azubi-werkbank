@@ -4,7 +4,26 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.1.0] - 2026-10-06
+## [1.2.0] - 2026-10-06
+
+### Added
+- Form editor for Fachbetreuer (`/admin/editor`, "Editor" in the top bar):
+  create workbooks (blank or as a copy) and edit every part — metadata,
+  header fields, colours, levels, days, modules and tasks with answer fields,
+  free blocks, hints, bonus and trainer content; add/move/remove items;
+  per-task preview.
+- Saving validates the whole catalog (errors are listed and marked at the
+  field), backs up the previous file to `workbooks/_backups/` (last 10),
+  writes YAML while keeping comments and formatting of unchanged parts, and
+  refuses to overwrite a file that changed meanwhile.
+- Id protection: ids of tasks and answer fields with saved answers are
+  read-only; removing them requires an explicit confirmation.
+
+### Changed
+- `network-security.yaml`: two over-long lines re-wrapped (content
+  unchanged) so that saving it in the editor produces no diff.
+
+ - 2026-10-06
 
 ### Added
 - "Meine Aufgaben" (`/my-tasks`, link in the top bar) for every logged-in

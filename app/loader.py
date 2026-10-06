@@ -233,6 +233,11 @@ class Registry:
         with self._lock:
             return {wid: e.catalog for wid, e in sorted(self._by_id.items()) if e.catalog}
 
+    def entry_for(self, workbook_id: str) -> Entry | None:
+        """The file entry currently serving ``workbook_id``."""
+        with self._lock:
+            return self._by_id.get(workbook_id)
+
     def get(self, workbook_id: str) -> Catalog | None:
         with self._lock:
             entry = self._by_id.get(workbook_id)

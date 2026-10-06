@@ -1,0 +1,23 @@
+{% extends "page.html" %}
+{% block title %}{{ t('editor.edit_title', title=entry.catalog.workbook.title) }}{% endblock %}
+{% block content %}
+<div class="editor-top">
+  <div>
+    <p><a href="/admin/editor">{{ t('editor.back') }}</a> · <a href="/workbooks/{{ workbook_id }}">{{ t('editor.open_workbook') }}</a></p>
+    <h1 class="page-title">{{ t('editor.edit_title', title=entry.catalog.workbook.title) }}</h1>
+    <p class="page-intro">{{ t('editor.edit_intro', file=entry.path.name) }}</p>
+  </div>
+</div>
+<div class="editor-bar">
+  <span class="editor-status" data-editor-status role="status" aria-live="polite">{{ t('editor.loading') }}</span>
+  <button type="button" class="button" data-editor-save disabled>{{ t('editor.save') }}</button>
+</div>
+<div data-editor-messages aria-live="assertive"></div>
+<div data-editor="{{ workbook_id }}" data-text-failed="{{ t('editor.load_failed') }}">
+  <div data-editor-form class="editor-form"></div>
+</div>
+<div class="editor-bar editor-bar-bottom">
+  <button type="button" class="button" data-editor-save disabled>{{ t('editor.save') }}</button>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/js/editor.js" defer></script>{% endblock %}

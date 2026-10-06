@@ -15,7 +15,7 @@ from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import admin, auth, events, pages, progress
+from app.api import admin, auth, editor, events, pages, progress
 from app.api.common import render, wants_html
 from app.auth import (
     AccountService,
@@ -99,6 +99,8 @@ def create_app(config: Config | None = None, *, watch: bool = True) -> FastAPI:
     app.include_router(admin.router)
     app.include_router(events.router)
     app.include_router(progress.router)
+    app.include_router(editor.router)
+    app.include_router(editor.api)
     _install_error_handlers(app)
     return app
 

@@ -9,6 +9,32 @@ a real, complete example is `workbooks/network-security.yaml`.
 Keys are English; everything apprentices read (titles, tasks, hints, labels)
 is written in German.
 
+## Form editor (in the browser)
+
+Fachbetreuer can create and edit workbooks without touching YAML: **Editor**
+in the top bar (`/admin/editor`).
+
+- **New workbook**: title + id, either blank (one day, one module, one task to
+  start from) or as a copy of an existing workbook.
+- **Editing**: metadata, header fields, colours, levels, and the tree of days,
+  modules and tasks. Every item can be added, moved up/down and removed; a
+  task opens into a form with all fields (fixed layout or free blocks,
+  answer fields, hints, bonus, "Das sollte drinstehen", notes) and a
+  **Vorschau** button that renders it exactly as Fachbetreuer see it.
+- **Saving** validates the whole workbook first; problems are listed and
+  marked at the field. The previous file is copied to
+  `workbooks/_backups/` (last 10 versions per workbook), then the YAML is
+  rewritten — comments and formatting of unchanged parts are kept.
+- **Id protection**: ids of tasks and answer fields that already have saved
+  answers are read-only (marked "hat Antworten"). Removing such a task or
+  field asks for confirmation; the saved answers stay in the progress files
+  ("Verwaiste Antworten").
+- If the file was changed elsewhere in the meantime (by hand or by another
+  Fachbetreuer), saving is refused instead of overwriting — reload the page.
+
+Everything below describes the file format itself, for authors who prefer
+writing YAML directly.
+
 ## Quick start
 
 ```sh

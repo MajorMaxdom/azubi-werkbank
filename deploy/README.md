@@ -96,6 +96,9 @@ Catalog authors are added to the `workbook` group
 `/var/lib/workbook/workbooks/` directly. The server picks up every change within
 about a second; broken files keep their last valid version and the error is
 shown on `/admin/catalogs`. See `docs/workbook-template.yaml` for all fields.
+Fachbetreuer can also use the form editor in the browser (`/admin/editor`);
+it writes to the same directory and keeps the last 10 versions of every file
+in `/var/lib/workbook/workbooks/_backups/`.
 
 ## 6. Service
 

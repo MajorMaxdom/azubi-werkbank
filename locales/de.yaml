@@ -12,6 +12,7 @@ nav:
   catalogs: Kataloge
   overview: Übersicht
   my_tasks: Meine Aufgaben
+  editor: Editor
   home: Zur Startseite
 
 day:
@@ -284,6 +285,7 @@ errors:
   color_null: "Farbe „{key}“ ist leer – Hex-Farben in YAML in Anführungszeichen setzen, z. B. \"#1B365D\"."
   parse_error: "Syntaxfehler: {message}"
   read_error: "Datei kann nicht gelesen werden: {message}"
+  id_changed: Die Heft-ID kann nicht geändert werden.
   duplicate_workbook: "Die Heft-ID „{id}“ wird bereits von {file} verwendet."
   kind:
     day: Tag-ID
@@ -309,3 +311,178 @@ auth:
   password_mismatch: Die beiden Passwörter stimmen nicht überein.
   password_too_short: Das Passwort muss mindestens 12 Zeichen lang sein.
   password_too_long: Das Passwort ist zu lang.
+
+editor:
+  title: Arbeitshefte bearbeiten
+  intro: Hefte im Browser bearbeiten oder neu anlegen. Gespeichert wird als YAML im Verzeichnis „workbooks“; vor jedem Speichern wird die alte Datei gesichert.
+  edit: Bearbeiten
+  has_errors: Datei hat Fehler – es wird die letzte gültige Version bearbeitet.
+  not_editable: Erst die Fehler in der Datei beheben (siehe Kataloge).
+  new_heading: Neues Arbeitsheft
+  new_title: Titel
+  new_id: Heft-ID
+  new_id_hint: a–z, 0–9 und „-“. Wird für Adressen und Speicherstände verwendet und kann später nicht geändert werden.
+  new_source: Vorlage
+  new_blank: Leeres Heft
+  new_copy: "Kopie von „{title}“"
+  create: Anlegen und bearbeiten
+  error_title: Bitte einen Titel angeben.
+  error_id: "Ungültige Heft-ID: nur a–z, 0–9 und „-“, Beginn mit Buchstabe oder Ziffer."
+  error_exists: Diese Heft-ID ist schon vergeben.
+  error_source: Die Vorlage konnte nicht gelesen werden.
+  edit_title: "Heft bearbeiten: {title}"
+  edit_intro: "Datei {file}. Änderungen sind nach dem Speichern sofort für alle sichtbar."
+  back: Zur Heftliste
+  open_workbook: Heft ansehen
+  loading: Lädt …
+  load_failed: Das Heft konnte nicht geladen werden. Bitte die Seite neu laden.
+  save: Speichern
+
+editor_ui:
+  loading: Lädt …
+  load_failed: Laden fehlgeschlagen.
+  saving: Speichert …
+  saved: "Gespeichert – Version {version}"
+  unsaved: Ungespeicherte Änderungen
+  unsaved_leave: Es gibt ungespeicherte Änderungen.
+  has_errors: Nicht gespeichert – bitte Fehler korrigieren.
+  save_failed: Speichern fehlgeschlagen.
+  conflict_short: Nicht gespeichert – Datei wurde geändert.
+  conflict: Die Datei wurde inzwischen geändert (von jemand anderem oder direkt im Verzeichnis). Lade die Seite neu, um den aktuellen Stand zu bearbeiten – deine Änderungen hier gehen dabei verloren.
+  reload: Neu laden
+  errors_heading: "Bitte korrigieren:"
+  confirm_heading: "Zu diesen Aufgaben bzw. Antwortfeldern gibt es bereits gespeicherte Antworten:"
+  confirm_text: Die Antworten bleiben gespeichert, werden aber nicht mehr angezeigt (Fachbetreuer sehen sie unter „Verwaiste Antworten“).
+  confirm_task: "Aufgabe {id} wird entfernt"
+  confirm_answers: "Aufgabe {id}: Felder {answers} werden entfernt"
+  confirm_yes: Trotzdem speichern
+  confirm_no: Abbrechen
+  section_meta: Heft
+  section_header_fields: Kopffelder
+  section_colors: Farben (optional)
+  section_levels: Stufen
+  section_days: Tage, Module und Aufgaben
+  field_id: ID
+  field_version: Version
+  field_title: Titel
+  field_subtitle: Untertitel
+  field_brand: Kurzname in der Kopfleiste
+  field_footer: Fußzeile
+  field_description: Beschreibung für die Startseite
+  field_intro: Einleitung
+  signoff_enabled: Abnahme durch Fachbetreuer
+  signoff_title: Überschrift der Abnahme
+  header_label: Beschriftung
+  header_type: Art
+  header_type_short: einzeilig
+  header_type_text: mehrzeilig
+  header_type_date: Datum
+  level_key: Schlüssel
+  level_label: Beschriftung
+  level_color: Farbe
+  level_description: Erklärung
+  level_color_label: "Stufenfarbe {color}"
+  color_name_blue: Blau
+  color_name_ochre: Ocker
+  color_name_green: Grün
+  color_name_grey: Grau
+  color_name_red: Rot
+  color_paper: Seitenhintergrund
+  color_card: Karten
+  color_ink: Text
+  color_muted: Nebentext
+  color_line: Linien
+  color_accent: Akzent
+  color_accent_hover: Akzent (Hover)
+  color_accent_soft: Akzent (hell)
+  color_ok: Erledigt / OK
+  color_redo: Nacharbeiten
+  color_hint_bg: Hilfestellung
+  color_trainer_bg: Fachbetreuer-Bereich
+  color_bonus_bg: Extra
+  day_label: "Tag {n}"
+  day_nav_label: Kurzname in der Navigation
+  day_nav_tag: Kürzel in der Navigation
+  day_optional: Optionaler Tag
+  module_code: Modulcode
+  module_objective: Lernziel
+  task_title: Titel der Aufgabe
+  task_number: Nummer
+  task_level: Stufe
+  task_duration: Dauer
+  task_layout: Aufbau
+  layout_fixed: Standard (Anforderung, Code, Schritte, Leitfragen)
+  layout_blocks: Freie Blöcke
+  task_requirement: Anforderung
+  task_snippet: Codeblock / Beispielausgabe
+  task_steps: Schritte (Klickpfad)
+  task_questions: Leitfragen
+  task_hints: Hilfestellung
+  task_bonus: Extra für Schnelle
+  trainer_heading: Nur für Fachbetreuer
+  task_expectations: Das sollte drinstehen
+  task_notes: Interne Notizen
+  answers: Antwortfelder
+  answer_type: Art
+  answer_type_text: Text (mehrzeilig)
+  answer_type_short: Text (einzeilig)
+  answer_type_checklist: Checkliste
+  answer_type_choice: Auswahl
+  answer_type_date: Datum
+  answer_label: Beschriftung
+  answer_placeholder: Platzhalter
+  answer_height: Mindesthöhe (px)
+  answer_monospace: Festbreitenschrift
+  answer_items: Einträge der Checkliste
+  answer_options: Auswahlmöglichkeiten
+  answer_multiple: Mehrfachauswahl
+  blocks: Blöcke
+  block_type: Art
+  block_type_text: Text
+  block_type_table: Tabelle
+  block_type_snippet: Codeblock
+  block_type_steps: Schritte
+  block_type_questions: Leitfragen
+  block_type_image: Bild
+  block_type_note: Hinweis
+  block_content: Inhalt
+  block_caption: Bildunterschrift / Titel
+  block_columns: Spalten
+  block_rows: Zeilen
+  block_items: Einträge
+  block_src: Bilddatei
+  block_alt: Bildbeschreibung (Pflicht)
+  block_variant: Art des Hinweises
+  variant_info: Info
+  variant_warning: Warnung
+  add_day: Tag hinzufügen
+  add_module: Modul hinzufügen
+  add_task: Aufgabe hinzufügen
+  add_answer: Antwortfeld hinzufügen
+  add_block: Block hinzufügen
+  add_header_field: Kopffeld hinzufügen
+  add_level: Stufe hinzufügen
+  new_day_title: Neuer Tag
+  new_module_title: Neues Modul
+  new_task_title: Neue Aufgabe
+  untitled: (ohne Titel)
+  has_answers: hat Antworten
+  edit: Bearbeiten
+  close: Schließen
+  remove: Entfernen
+  move_up: Nach oben
+  move_down: Nach unten
+  preview: Vorschau
+  preview_heading: "Vorschau (so sehen es Fachbetreuer):"
+  hint_markdown: "Markdown: **fett**, *kursiv*, `Code`, Listen mit „- “."
+  hint_snippet: Wird genau so angezeigt, in Festbreitenschrift.
+  hint_lines: Ein Eintrag pro Zeile (Markdown möglich).
+  hint_rows: Eine Zeile pro Tabellenzeile, Zellen mit | trennen.
+  hint_id: a–z, 0–9 und „-“. Nicht mehr ändern, sobald Azubis begonnen haben.
+  hint_workbook_id: Kann nicht geändert werden.
+  hint_version: z. B. 1.0.0 – bei jeder Veröffentlichung erhöhen.
+  hint_number: leer = automatisch (Tag.Position)
+  hint_duration: z. B. 30m, 1h, 1h30m
+  hint_src: z. B. assets/heft-id/bild.png
+  hint_colors: Hex-Farben wie #1B365D. Leer lassen = Standardfarbe.
+  id_locked: Gesperrt – zu dieser ID gibt es bereits gespeicherte Antworten.
