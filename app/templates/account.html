@@ -1,0 +1,36 @@
+{% extends "page.html" %}
+{% block title %}{{ t('account.title') }}{% endblock %}
+{% block sheet_class %}{{ 'sheet-narrow' }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('account.title') }}</h1>
+<p class="page-intro">{{ t('account.intro', name=user.name, username=username) }}</p>
+
+<form method="post" action="/account" class="panel form-stack">
+  <h2 class="section-title">{{ t('account.password_heading') }}</h2>
+  {% if saved %}<p class="form-success" role="status">{{ t('account.password_changed') }}</p>{% endif %}
+  {% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="text" name="username" value="{{ username }}" autocomplete="username" hidden>
+  <div class="field">
+    <label class="micro-label" for="current_password">{{ t('account.current_password') }}</label>
+    <input id="current_password" name="current_password" type="password" autocomplete="current-password" required>
+  </div>
+  <div class="field">
+    <label class="micro-label" for="password">{{ t('auth.new_password') }}</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required>
+    <p class="field-hint">{{ t('auth.password_rule') }}</p>
+  </div>
+  <div class="field">
+    <label class="micro-label" for="password_repeat">{{ t('auth.password_repeat') }}</label>
+    <input id="password_repeat" name="password_repeat" type="password" autocomplete="new-password" minlength="12" required>
+  </div>
+  <p class="field-hint">{{ t('account.sessions_hint') }}</p>
+  <button type="submit" class="button">{{ t('account.password_submit') }}</button>
+</form>
+
+<section class="panel form-stack account-data">
+  <h2 class="section-title">{{ t('account.data_heading') }}</h2>
+  <p>{{ t('account.data_text') }}</p>
+  <a class="button" href="/account/data">{{ t('account.data_download') }}</a>
+</section>
+{% endblock %}

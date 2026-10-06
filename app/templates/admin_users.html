@@ -8,6 +8,7 @@
 <p class="form-error" role="alert">{{ t('admin.users.file_error', message=users_error) }}</p>
 {% endif %}
 {% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+{% if deleted %}<p class="form-success" role="status">{{ t('user_delete.deleted', name=deleted.name, username=deleted.username) }}</p>{% endif %}
 
 {% if invite %}
 <section class="panel invite-box" aria-live="polite">
@@ -63,6 +64,10 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="button button-quiet">{{ t('admin.users.activate') }}</button>
           </form>
+          {% endif %}
+          <a class="button button-quiet" href="/admin/users/{{ row.username }}/data">{{ t('user_delete.export') }}</a>
+          {% if not identity or identity.username != row.username %}
+          <a class="button button-quiet" href="/admin/users/{{ row.username }}/delete">{{ t('user_delete.button') }}</a>
           {% endif %}
         </td>
       </tr>
