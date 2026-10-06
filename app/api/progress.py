@@ -4,11 +4,15 @@ Apprentice endpoints may only touch ``header``, ``answers`` and ``done`` of
 their OWN progress (the user comes from the session, never from the URL or
 body). Fachbetreuer endpoints may only touch ``review`` and ``signoff``; the
 username in their URLs names the apprentice being reviewed, while the acting
-Fachbetreuer again comes from the session."""
+Fachbetreuer again comes from the session.
+
+Both roles may append messages to a task's question/answer thread
+(``comments``); the author and role are taken from the session as well."""
 
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -17,9 +21,10 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 
 from app.auth import Identity, get_current_user, is_valid_username, verify_json_api
 from app.models.catalog import Catalog, HeaderField
-from app.models.progress import Progress, Review, Signoff, TaskProgress
+from app.models.progress import Comment, Progress, Review, Signoff, TaskProgress
 from app.progress import (
     MAX_ANSWER_CHARS,
+    MAX_COMMENT_CHARS,
     MAX_REQUEST_BYTES,
     InvalidInput,
     all_task_ids,
@@ -28,7 +33,7 @@ from app.progress import (
     validate_answers,
     validate_header,
 )
-from app.renderer import task_hash
+from app.renderer import german_datetime, task_hash
 
 router = APIRouter(prefix="/api/progress", dependencies=[Depends(verify_json_api)])
 
@@ -166,6 +171,23 @@ def reviewed_catalog(
     return catalog
 
 
+# The review comment is autosaved while the Fachbetreuer types. Saves by the same
+# Fachbetreuer within this window that keep the status and only change the comment
+# continue the same review instead of filling the history with half-typed text.
+# A changed status, another Fachbetreuer, an older review or clearing the review
+# always moves the previous review into the history.
+REVIEW_EDIT_WINDOW = timedelta(minutes=10)
+
+
+def is_ongoing_edit(old: Review, status: str | None, username: str, now) -> bool:
+    return (
+        old.status == status
+        and old.reviewed_by == username
+        and old.reviewed_at is not None
+        and now - old.reviewed_at < REVIEW_EDIT_WINDOW
+    )
+
+
 @router.patch("/{workbook_id}/users/{username}/tasks/{task_id}/review")
 async def patch_review(
     request: Request, workbook_id: str, username: str, task_id: str, identity: CurrentUser
@@ -180,14 +202,20 @@ async def patch_review(
 
     def change(progress: Progress) -> None:
         tp = progress.tasks.get(task_id) or TaskProgress()
-        if data.status is None and not data.comment:
+        now = utcnow()
+        old = tp.review
+        clearing = data.status is None and not data.comment
+        changed = old is not None and (old.status, old.comment) != (data.status, data.comment)
+        if changed and (clearing or not is_ongoing_edit(old, data.status, identity.username, now)):
+            tp.review_history.append(old)
+        if clearing:
             tp.review = None
         else:
             tp.review = Review(
                 status=data.status,
                 comment=data.comment,
                 reviewed_by=identity.username,
-                reviewed_at=utcnow(),
+                reviewed_at=now,
             )
         progress.tasks[task_id] = tp
 
@@ -218,3 +246,60 @@ async def patch_signoff(request: Request, workbook_id: str, username: str, ident
 
     progress = request.app.state.progress.update(catalog, username, change)
     return {"updated_at": progress.updated_at, "signoff": progress.signoff}
+
+
+# --------------------------------------------------------------------------- comments
+
+
+class CommentPost(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: Annotated[str, Field(max_length=MAX_COMMENT_CHARS)]
+
+
+async def add_comment(
+    request: Request, catalog: Catalog, owner: str, task_id: str, identity: Identity
+):
+    """Append a message by the session user to ``owner``'s thread of ``task_id``."""
+    if find_task(catalog, task_id) is None:
+        return unprocessable(f"unknown task id '{task_id}'")
+    try:
+        data = CommentPost.model_validate(await read_json(request))
+    except ValidationError:
+        return unprocessable(f"body must be {{text: str}} with 1-{MAX_COMMENT_CHARS} characters")
+    text = data.text.strip()
+    if not text:
+        return unprocessable("text must not be empty")
+    comment = Comment(
+        author=identity.username,
+        role="trainer" if identity.is_trainer else "apprentice",
+        text=text,
+        at=utcnow(),
+    )
+
+    def change(progress: Progress) -> None:
+        tp = progress.tasks.get(task_id) or TaskProgress()
+        tp.comments.append(comment)
+        progress.tasks[task_id] = tp
+
+    progress = request.app.state.progress.update(catalog, owner, change)
+    return {
+        "updated_at": progress.updated_at,
+        "comment": comment,
+        "author_name": identity.user.name,
+        "at_text": german_datetime(comment.at),
+    }
+
+
+@router.post("/{workbook_id}/tasks/{task_id}/comments")
+async def post_own_comment(request: Request, workbook_id: str, task_id: str, identity: CurrentUser):
+    catalog = apprentice_catalog(request, workbook_id, identity)
+    return await add_comment(request, catalog, identity.username, task_id, identity)
+
+
+@router.post("/{workbook_id}/users/{username}/tasks/{task_id}/comments")
+async def post_review_comment(
+    request: Request, workbook_id: str, username: str, task_id: str, identity: CurrentUser
+):
+    catalog = reviewed_catalog(request, workbook_id, username, identity)
+    return await add_comment(request, catalog, username, task_id, identity)

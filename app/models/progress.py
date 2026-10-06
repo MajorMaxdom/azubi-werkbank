@@ -22,6 +22,15 @@ class Review(Lenient):
     reviewed_at: datetime | None = None
 
 
+class Comment(Lenient):
+    """One message of the question/answer thread of a task (append-only)."""
+
+    author: str
+    role: Literal["apprentice", "trainer"]
+    text: str
+    at: datetime
+
+
 class TaskProgress(Lenient):
     answers: dict[str, AnswerValue] = {}
     done: bool = False
@@ -29,6 +38,8 @@ class TaskProgress(Lenient):
     task_hash: str | None = None
     updated_at: datetime | None = None
     review: Review | None = None
+    review_history: list[Review] = []  # earlier reviews, oldest first
+    comments: list[Comment] = []  # question/answer thread, oldest first
 
 
 class Signoff(Lenient):

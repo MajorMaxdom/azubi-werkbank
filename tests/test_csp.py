@@ -94,6 +94,15 @@ def pages(tmp_path):
             json={"answers": {"a1": "<script>alert(1)</script>"}, "done": True},
             headers={"Origin": BASE_URL, "X-Workbook": "1"},
         )
+        # Question/answer thread and review history (rendered with forms and details).
+        json_headers = {"Origin": BASE_URL, "X-Workbook": "1"}
+        anna.post("/api/progress/demo/tasks/t1/comments", json={"text": "Frage?"},
+                  headers=json_headers)  # fmt: skip
+        boss.post("/api/progress/demo/users/anna/tasks/t1/comments", json={"text": "Antwort"},
+                  headers=json_headers)  # fmt: skip
+        for review in ({"status": "redo", "comment": "Erst"}, {"status": "ok", "comment": ""}):
+            boss.patch("/api/progress/demo/users/anna/tasks/t1/review", json=review,
+                       headers=json_headers)  # fmt: skip
         link = boss.app.state.accounts.create_user("neu", "Neu", "apprentice")
         result["invite"] = anna.get(link.removeprefix(BASE_URL)).text
         for path in ["/", "/workbooks/demo", "/workbooks/themed", "/workbooks/network-security",
@@ -120,6 +129,14 @@ def test_user_input_cannot_inject_script(pages):
     for name in ("anna /workbooks/demo", "boss /workbooks/demo/users/anna"):
         assert "<script>alert(1)" not in pages[name]
         assert "&lt;script&gt;alert(1)&lt;/script&gt;" in pages[name]
+
+
+def test_fixture_covers_thread_and_review_history(pages):
+    for name in ("anna /workbooks/demo", "boss /workbooks/demo/users/anna"):
+        assert "data-thread-url=" in pages[name] and "Bewertungsverlauf (1)" in pages[name]
+        assert '<script src="/static/js/comments.js" defer></script>' in pages[name]
+    assert ">Rückfrage</span>" not in pages["boss /my-tasks?scope=all"]  # answered
+    assert ">Antwort</span>" in pages["anna /my-tasks"]
 
 
 def test_theme_is_linked_not_inlined(pages):

@@ -210,6 +210,7 @@ def create_environment(t: Translator | None = None) -> Environment:
     env.filters["md_inline"] = render_markdown_inline
     env.filters["textarea_rows"] = textarea_rows
     env.filters["de_date"] = german_date
+    env.filters["de_datetime"] = german_datetime
     return env
 
 
@@ -225,6 +226,13 @@ def german_date(value) -> str:
         return date.fromisoformat(str(value)).strftime("%d.%m.%Y")
     except ValueError:
         return str(value)
+
+
+def german_datetime(value: datetime | None) -> str:
+    """Datetime -> ``dd.mm.yyyy HH:MM`` in local time."""
+    if not value:
+        return ""
+    return value.astimezone().strftime("%d.%m.%Y %H:%M")
 
 
 def textarea_rows(height: int | None) -> int:
@@ -305,11 +313,13 @@ def render_static(
     export: ExportInfo | None = None,
     review: ReviewContext | None = None,
     view: WorkbookView | None = None,
+    names: dict[str, str] | None = None,
 ) -> str:
     """Render a self-contained HTML file with tokens, theme and fonts inlined.
 
     Without ``export`` this is the authoring preview (``workbook render``).
     With ``export`` it is a print-friendly snapshot of one user's answers.
+    ``names`` maps usernames to display names (authors of messages and reviews).
     """
     env = create_environment(t)
     view = view or build_view(catalog, t)
@@ -320,6 +330,7 @@ def render_static(
         static=True,
         export=export,
         review=review,
+        names=names or {},
         inline_css=Markup(inline_base_css()),
         inline_theme=Markup(view.theme_css),
         asset_url=static_asset_url(workbooks_dir or ROOT / "workbooks"),

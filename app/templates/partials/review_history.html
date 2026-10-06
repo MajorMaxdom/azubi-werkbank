@@ -1,0 +1,18 @@
+{# Earlier reviews of one task, newest first. Needs: tp, names. #}
+{% set nm = names or {} %}
+{% if tp and tp.review_history %}
+<details class="review-history"{% if export %} open{% endif %}>
+  <summary>{{ icon('chevron-right') }}{{ icon('history') }}<span>{{ t('review_history.summary', count=tp.review_history | length) }}</span></summary>
+  <ol class="details-body history-list">
+    {% for old in tp.review_history | reverse %}
+    <li class="history-item history-{{ old.status or 'none' }}">
+      <p class="history-meta">
+        <strong class="history-status">{% if old.status == 'ok' %}{{ t('trainer.status_ok') }}{% elif old.status == 'redo' %}{{ t('trainer.status_redo') }}{% else %}{{ t('review_history.no_status') }}{% endif %}</strong>
+        {% if old.reviewed_by %}<span>· {{ t('review_history.by', name=nm.get(old.reviewed_by, old.reviewed_by), date=old.reviewed_at | de_datetime) }}</span>{% endif %}
+      </p>
+      {% if old.comment %}<p class="history-comment">{{ old.comment }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</details>
+{% endif %}

@@ -38,7 +38,10 @@
   data-text-saving="{{ t('autosave.saving') }}" data-text-saved="{{ t('autosave.saved') }}"
   data-text-offline="{{ t('autosave.offline') }}" data-text-error="{{ t('autosave.error') }}"
   data-text-logged-out="{{ t('autosave.logged_out') }}" data-text-unsaved="{{ t('autosave.unsaved') }}"
-  data-text-progress="{{ t('topbar.progress', done='{done}', total='{total}', percent='{percent}') }}"{% endif %}>
+  data-text-progress="{{ t('topbar.progress', done='{done}', total='{total}', percent='{percent}') }}"{% endif %}{% if autosave %}
+  data-text-comment-empty="{{ t('comments.error_empty') }}" data-text-comment-too-long="{{ t('comments.error_too_long') }}"
+  data-text-comment-error="{{ t('comments.error') }}" data-text-comment-offline="{{ t('comments.error_offline') }}"
+  data-text-comment-logged-out="{{ t('comments.error_logged_out') }}" data-text-comment-role="{{ t('comments.role_trainer') }}"{% endif %}>
   {% if export %}
   <p class="export-bar">{{ t('export.header', name=export.name, date=export.exported_at | de_date) if export.name else t('export.header_blank', date=export.exported_at | de_date) }}</p>
   {% elif review %}
@@ -125,5 +128,6 @@
 {% if not static %}
 <script src="/static/js/events.js" defer></script>
 <script src="/static/js/autosave.js" defer></script>
+<script src="/static/js/comments.js" defer></script>
 {% endif %}
 {% endblock %}
