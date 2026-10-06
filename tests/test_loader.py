@@ -185,3 +185,12 @@ def test_cli_schema(tmp_path):
     assert schema["$schema"].endswith("2020-12/schema")
     assert schema["$defs"]["Task"]["additionalProperties"] is False
     assert "Never change it" in schema["$defs"]["Task"]["properties"]["id"]["description"]
+
+
+def test_readme_example_catalog_is_valid(tmp_path):
+    import re
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    example = re.search(r"```yaml\n(.*?)```", readme, flags=re.S).group(1)
+    result = load_file(write(tmp_path, "readme.yaml", example))
+    assert result.errors == [], [str(e) for e in result.errors]

@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] - 2026-10-06
+
+### Added
+- License: GNU AGPL-3.0-only (`LICENSE`, `pyproject.toml`).
+- README rewritten for GitHub: overview, workflow, features by role,
+  installation, minimal catalog example (validated by a test), development,
+  license; short German summary.
+
 ## [1.8.0] - 2026-10-06
 
 ### Added
