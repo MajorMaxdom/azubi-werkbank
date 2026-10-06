@@ -38,8 +38,8 @@ def write(tmp_path: Path, name: str, text: str) -> Path:
 
 
 def test_repository_catalogs_are_valid():
-    for name in ("_template.yaml", "network-security.yaml"):
-        result = load_file(ROOT / "workbooks" / name)
+    for path in sorted((ROOT / "workbooks").glob("*.yaml")):
+        result = load_file(path)
         assert result.errors == [], [str(e) for e in result.errors]
 
 

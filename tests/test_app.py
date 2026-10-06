@@ -82,14 +82,14 @@ def test_unknown_workbook_404(client, path):
     assert client.get(path + "/theme.css").status_code == 404
 
 
-def test_network_security_page_renders_without_trainer_content(config):
-    shutil.copy(ROOT / "workbooks" / "network-security.yaml", config.paths.workbooks)
+def test_demo_workbook_renders_without_trainer_content(config):
+    shutil.copy(ROOT / "workbooks" / "linux-basics.yaml", config.paths.workbooks)
     add_user(config, "azubi", "apprentice")
     with open_client(config, "azubi") as client:
-        html = client.get("/workbooks/network-security").text
-    assert "Wie startet ein Linux-System?" in html
+        html = client.get("/workbooks/linux-basics").text
+    assert "Der Verzeichnisbaum" in html
     assert "Bereich Fachbetreuer" not in html
-    assert "Reihenfolge A – C – E – D – B." not in html
+    assert "Erkennt, dass" not in html
 
 
 def test_static_files_served(client):

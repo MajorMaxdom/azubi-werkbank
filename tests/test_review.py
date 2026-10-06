@@ -53,29 +53,29 @@ def set_supervisors(config, block: str) -> None:
 # ------------------------------------------------------------------ trainer content never leaks
 
 
-def test_no_trainer_content_in_apprentice_html_network_security(tmp_path):
+def test_no_trainer_content_in_apprentice_html_demo_workbook(tmp_path):
     config = make_config(tmp_path)
-    shutil.copy(ROOT / "workbooks" / "network-security.yaml", config.paths.workbooks)
+    shutil.copy(ROOT / "workbooks" / "linux-basics.yaml", config.paths.workbooks)
     add_user(config, "anna", "apprentice")
     add_user(config, "boss", "trainer")
-    catalog = load_file(ROOT / "workbooks" / "network-security.yaml").catalog
+    catalog = load_file(ROOT / "workbooks" / "linux-basics.yaml").catalog
     secrets = []
     for tv in build_view(catalog).tasks_by_id.values():
         if tv.task.trainer:
             secrets += [str(render_markdown_inline(e)) for e in tv.task.trainer.expectations]
             if tv.task.trainer.notes:
                 secrets.append(str(render_markdown(tv.task.trainer.notes)).strip())
-    assert len(secrets) > 40
+    assert len(secrets) > 5
     with open_client(config, "anna") as client:
         patch_ok = client.patch(
-            "/api/progress/network-security/tasks/sys01-boot",
+            "/api/progress/linux-basics/tasks/lnx01-tree",
             json={"done": True},
             headers=JSON_HEADERS,
         )
         assert patch_ok.status_code == 200
-        pages = [client.get("/").text, client.get("/workbooks/network-security").text]
+        pages = [client.get("/").text, client.get("/workbooks/linux-basics").text]
     with open_client(config, "boss") as trainer:
-        review_html = trainer.get("/workbooks/network-security/users/anna").text
+        review_html = trainer.get("/workbooks/linux-basics/users/anna").text
     assert all(s in review_html for s in secrets)  # sanity: the trainer does see them
     for html in pages:
         for secret in secrets:

@@ -193,9 +193,9 @@ setup_data_dir() {
     install -d -o "$APP_USER" -g "$APP_USER" -m 2775 "$DATA_DIR/workbooks" "$DATA_DIR/workbooks/assets"
     if ! compgen -G "$DATA_DIR/workbooks/*.yaml" >/dev/null && ! compgen -G "$DATA_DIR/workbooks/*.json" >/dev/null; then
         install -o "$APP_USER" -g "$APP_USER" -m 0664 \
-            "$APP_DIR/workbooks/network-security.yaml" "$APP_DIR/workbooks/_template.yaml" \
+            "$APP_DIR/workbooks/linux-basics.yaml" "$APP_DIR/workbooks/_template.yaml" \
             "$DATA_DIR/workbooks/"
-        ok "Example workbooks copied (network-security.yaml, _template.yaml)"
+        ok "Example workbooks copied (linux-basics.yaml, _template.yaml)"
     else
         ok "Existing workbooks kept"
     fi

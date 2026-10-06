@@ -307,12 +307,15 @@ def test_render_document_for_json_catalogs(tmp_path):
     assert "ü" in render_document(path, {"a": "ü"})
 
 
-def test_network_security_roundtrip_is_stable(tmp_path):
-    """Saving the converted workbook unchanged must not alter the file."""
+@pytest.mark.parametrize("name", ["linux-basics.yaml", "network-security.yaml"])
+def test_roundtrip_is_stable(tmp_path, name):
+    """Saving a shipped workbook unchanged must not alter the file."""
     from app.editor import load_for_editor
 
     path = tmp_path / "ns.yaml"
-    original = (ROOT / "workbooks" / "network-security.yaml").read_text(encoding="utf-8")
+    if not (ROOT / "workbooks" / name).exists():
+        pytest.skip(f"{name} is not part of this checkout")
+    original = (ROOT / "workbooks" / name).read_text(encoding="utf-8")
     path.write_text(original, encoding="utf-8")
     data, _ = load_for_editor(path)
     assert render_document(path, clean(data)) == original

@@ -1,0 +1,237 @@
+# Demo workbook for Azubi-Werkbank: shows every kind of field.
+# Field reference: docs/workbook-template.yaml · Guide: docs/AUTHORING.md
+
+schema_version: 1
+workbook:
+  id: linux-basics
+  version: 1.0.0
+  title: "Arbeitsheft: Linux-Grundlagen"
+  subtitle: Fachinformatik Systemintegration · 1. Lehrjahr · 2 Tage · Module LNX
+  brand: AZUBI-WERKBANK // DEMO
+  description: >
+    Ein kurzes Demo-Heft: Dateisystem, Shell, Benutzer und Rechte – zum
+    Ausprobieren aller Funktionen.
+  intro: |
+    **Für wen ist dieses Heft?** Für alle, die zum ersten Mal auf einer Linux-
+    Kommandozeile arbeiten. Vorwissen brauchst du keins.
+
+    **So arbeitest du:** Antworten in eigenen Worten eintippen, Aufgabe abhaken,
+    fertig. Gespeichert wird automatisch. Arbeite nur auf deiner Übungs-VM.
+  header_fields:
+    - id: start-date
+      label: Bearbeitung ab
+      type: date
+    - id: vm-name
+      label: Name deiner Übungs-VM
+      type: short
+      placeholder: z. B. azubi-lab-01
+  footer: Demo-Heft · Übungen nur auf der eigenen Lab-VM
+  signoff:
+    enabled: true
+    title: Abnahme durch den Fachbetreuer
+
+levels:
+  understand:
+    label: Verstehen
+    color: blue
+    description: Lesen, recherchieren und in eigenen Worten erklären.
+  observe:
+    label: Beobachten
+    color: ochre
+    description: Am System nachschauen, nichts verändern.
+  apply:
+    label: Anwenden
+    color: green
+    description: Eine klar umrissene Sache selbst tun.
+
+days:
+  - id: day-1
+    title: Orientierung im Dateisystem
+    subtitle: Modul LNX-01 · wo liegt was, und wie bewege ich mich dorthin?
+    nav_label: Dateisystem
+    modules:
+      - code: LNX-01
+        title: Dateisystem und Shell
+        objective: |
+          Du findest dich im Linux-Verzeichnisbaum zurecht und kennst die
+          wichtigsten Befehle, um Dateien anzusehen.
+        tasks:
+          - id: lnx01-tree
+            title: Der Verzeichnisbaum
+            level: understand
+            duration: 30m
+            requirement: |
+              Unten siehst du einen Ausschnitt des Verzeichnisbaums. Erkläre zu
+              jedem Verzeichnis in **einem Satz**, wofür es da ist.
+            snippet: |
+              /
+              ├── etc
+              ├── home
+              ├── var
+              │   └── log
+              └── tmp
+            guiding_questions:
+              - Warum liegen Konfigurationsdateien nicht im Home-Verzeichnis?
+              - Was passiert mit dem Inhalt von `/tmp` nach einem Neustart?
+            hints: |
+              - **Bild im Kopf:** `/etc` ist der Aktenschrank mit Einstellungen,
+                `/var/log` das Logbuch des Systems.
+              - Suchbegriff: „Filesystem Hierarchy Standard“.
+            answers:
+              - id: explanation
+                label: "Je ein Satz pro Verzeichnis:"
+                placeholder: |-
+                  /etc: ...
+                  /home: ...
+                  /var/log: ...
+                  /tmp: ...
+                height: 140
+              - id: questions
+                label: "Antworten auf die zwei Fragen:"
+            bonus: |
+              - Finde heraus, was in `/proc` steht und warum die Dateien dort
+                scheinbar 0 Byte groß sind.
+            trainer:
+              expectations:
+                - "`/etc` = systemweite Konfiguration, `/home` = Benutzerdaten."
+                - Erkennt, dass `/tmp` nicht für dauerhafte Daten gedacht ist.
+          - id: lnx01-commands
+            title: Erste Befehle ausprobieren
+            level: observe
+            duration: 45m
+            requirement: |
+              Melde dich auf deiner Übungs-VM an und probiere die Befehle der
+              Reihe nach aus. Notiere, was du siehst – ändere nichts.
+            steps:
+              - Mit `pwd` herausfinden, in welchem Verzeichnis du gerade bist.
+              - Mit `ls -la` den Inhalt anzeigen lassen.
+              - Mit `cd /var/log` wechseln und erneut `ls -la` ausführen.
+              - "Mit `tail -n 5 syslog` die letzten fünf Zeilen ansehen (ggf. `journalctl -n 5`)."
+            hints: |
+              **Kurzreferenz:**
+
+              ```
+              pwd       wo bin ich?
+              ls -la    alles anzeigen, auch versteckte Dateien
+              cd PFAD   Verzeichnis wechseln
+              tail -n 5 DATEI   die letzten fünf Zeilen
+              ```
+            answers:
+              - id: tried
+                type: checklist
+                label: "Welche Befehle hast du ausgeführt?"
+                items: [pwd, ls -la, cd /var/log, tail]
+              - id: output
+                label: "Die letzten fünf Log-Zeilen (gekürzt):"
+                monospace: true
+                height: 120
+              - id: hidden
+                type: choice
+                label: "Woran erkennst du versteckte Dateien?"
+                options:
+                  - Sie beginnen mit einem Punkt
+                  - Sie sind grau dargestellt
+                  - Sie haben keine Dateiendung
+            trainer:
+              expectations:
+                - Alle vier Befehle ausgeführt, Ausgabe nachvollziehbar notiert.
+                - "Versteckte Dateien: beginnen mit einem Punkt."
+  - id: day-2
+    title: Benutzer und Rechte
+    subtitle: Modul LNX-02 · wer darf was?
+    nav_label: Rechte
+    modules:
+      - code: LNX-02
+        title: Benutzer und Dateirechte
+        objective: Du kannst Dateirechte lesen und gezielt setzen.
+        tasks:
+          - id: lnx02-read-permissions
+            title: Dateirechte lesen
+            level: understand
+            duration: 30m
+            blocks:
+              - type: text
+                content: |
+                  Jede Datei hat Rechte für **Besitzer**, **Gruppe** und **alle
+                  anderen**. Die Tabelle zeigt, wie die Buchstaben zu lesen sind.
+              - type: table
+                caption: Rechte-Buchstaben
+                columns: [Buchstabe, Bedeutung bei Dateien, Bedeutung bei Verzeichnissen]
+                rows:
+                  - ["r", "lesen", "Inhalt auflisten"]
+                  - ["w", "schreiben", "Dateien anlegen/löschen"]
+                  - ["x", "ausführen", "hineinwechseln"]
+              - type: snippet
+                caption: Beispielausgabe von ls -l
+                content: |
+                  -rw-r----- 1 anna  azubis  1204 Okt  6 10:12 bericht.txt
+                  drwxr-x--- 2 anna  azubis  4096 Okt  6 10:15 projekt
+              - type: questions
+                items:
+                  - Wer darf `bericht.txt` lesen, wer darf sie ändern?
+                  - Darf ein Mitglied der Gruppe `azubis` in `projekt` neue Dateien anlegen?
+            answers:
+              - id: who
+                label: "Deine Antworten:"
+            trainer:
+              expectations:
+                - "bericht.txt: anna lesen+schreiben, Gruppe lesen, andere nichts."
+                - "projekt: Gruppe darf hineinwechseln und auflisten, aber nichts anlegen."
+          - id: lnx02-chmod
+            title: Rechte selbst setzen
+            level: apply
+            duration: 45m
+            blocks:
+              - type: note
+                variant: warning
+                content: Nur in deinem eigenen Home-Verzeichnis auf der Übungs-VM arbeiten!
+              - type: steps
+                items:
+                  - "Eine Datei anlegen: `touch geheim.txt`"
+                  - "Rechte prüfen: `ls -l geheim.txt`"
+                  - "Nur dir Lesen und Schreiben erlauben: `chmod 600 geheim.txt`"
+                  - Erneut prüfen und das Ergebnis notieren.
+            hints: |
+              Die Zahlen sind Summen: **4** = lesen, **2** = schreiben,
+              **1** = ausführen. `6` heißt also lesen + schreiben.
+            answers:
+              - id: before-after
+                label: "Rechte vorher und nachher:"
+                type: short
+                monospace: true
+                placeholder: "-rw-r--r-- → ..."
+              - id: done-on
+                type: date
+                label: "Erledigt am:"
+              - id: octal
+                type: choice
+                multiple: true
+                label: "Welche Werte erlauben dem Besitzer das Schreiben?"
+                options: ["600", "644", "444", "755"]
+            bonus: |
+              - Was bewirkt `chmod u+x` – und wann brauchst du das?
+            trainer:
+              expectations:
+                - "Ergebnis `-rw-------`."
+                - "Schreiben für Besitzer: 600, 644, 755."
+              notes: Gute Gelegenheit, über sudo und das Prinzip der minimalen Rechte zu sprechen.
+
+  - id: final
+    title: Abschluss
+    subtitle: Freiwillig, wenn Zeit bleibt
+    nav_label: Abschluss
+    nav_tag: OPT
+    optional: true
+    modules:
+      - code: LNX-03
+        title: Wochenrückblick
+        tasks:
+          - id: lnx03-review
+            title: Was hast du gelernt?
+            level: understand
+            duration: 20m
+            requirement: Fasse in drei bis fünf Sätzen zusammen, was du in diesem Heft gelernt hast.
+            answers:
+              - id: summary
+                label: "Dein Rückblick:"
+                height: 160

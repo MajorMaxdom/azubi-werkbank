@@ -15,6 +15,11 @@ from tests.conftest import ROOT
 REFERENCE = ROOT / "docs" / "reference" / "arbeitsheft.html"
 CATALOG = ROOT / "workbooks" / "network-security.yaml"
 
+# The original workbook is private and not part of the public repository.
+pytestmark = pytest.mark.skipif(
+    not (REFERENCE.exists() and CATALOG.exists()), reason="private reference workbook not present"
+)
+
 # Elements that do not split text (inline formatting).
 INLINE = {"strong", "em", "code", "b", "i"}
 # Reference UI chrome that is intentionally replaced by locale strings or the server.

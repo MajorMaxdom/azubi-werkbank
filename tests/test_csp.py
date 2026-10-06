@@ -74,8 +74,8 @@ def audit(html: str) -> list[str]:
 def pages(tmp_path):
     config = make_config(tmp_path)
     (config.paths.workbooks / "demo.yaml").write_text(CATALOG, encoding="utf-8")
-    (config.paths.workbooks / "network-security.yaml").write_text(
-        (ROOT / "workbooks" / "network-security.yaml").read_text(encoding="utf-8"), encoding="utf-8"
+    (config.paths.workbooks / "linux-basics.yaml").write_text(
+        (ROOT / "workbooks" / "linux-basics.yaml").read_text(encoding="utf-8"), encoding="utf-8"
     )
     themed = CATALOG.replace("id: demo", "id: themed").replace(
         "  title: Demo\n", '  title: Themed\n  stylesheet:\n    accent: "#0F4C3A"\n'
@@ -105,16 +105,16 @@ def pages(tmp_path):
                        headers=json_headers)  # fmt: skip
         link = boss.app.state.accounts.create_user("neu", "Neu", "apprentice")
         result["invite"] = anna.get(link.removeprefix(BASE_URL)).text
-        for path in ["/", "/workbooks/demo", "/workbooks/themed", "/workbooks/network-security",
+        for path in ["/", "/workbooks/demo", "/workbooks/themed", "/workbooks/linux-basics",
                      "/workbooks/demo/users/anna", "/admin/overview", "/admin/users",
                      "/admin/users/anna", "/admin/catalogs", "/nope", "/my-tasks",
                      "/my-tasks?filter=open", "/my-tasks?filter=ok", "/my-tasks?filter=redo",
                      "/my-tasks?scope=all", "/admin/editor", "/admin/editor/demo", "/account",
                      "/admin/users/anna/delete", "/admin/assign", "/admin/editor/demo/assets",
                      "/admin/editor/demo/delete",
-                     "/admin/assign?workbook=network-security"]:  # fmt: skip
+                     "/admin/assign?workbook=linux-basics"]:  # fmt: skip
             result[f"boss {path}"] = boss.get(path).text
-        for path in ["/", "/workbooks/demo", "/workbooks/network-security", "/admin/users",
+        for path in ["/", "/workbooks/demo", "/workbooks/linux-basics", "/admin/users",
                      "/my-tasks", "/account"]:  # fmt: skip
             result[f"anna {path}"] = anna.get(path).text
     return result
