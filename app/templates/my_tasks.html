@@ -2,13 +2,21 @@
 {% block title %}{{ t('my_tasks.title') }}{% endblock %}
 {% block content %}
 <h1 class="page-title">{{ t('my_tasks.title') }}</h1>
-<p class="page-intro">{{ t('my_tasks.intro_trainer') if identity.is_trainer else t('my_tasks.intro_apprentice') }}</p>
-<nav class="filter-tabs" aria-label="{{ t('my_tasks.filter') }}">
-  <a href="/my-tasks"{% if active == 'all' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_all') }}</a>
-  <a href="/my-tasks?filter=open"{% if active == 'open' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_open_trainer') if identity.is_trainer else t('my_tasks.filter_open') }}</a>
-  <a href="/my-tasks?filter=ok"{% if active == 'ok' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_ok') }}</a>
-  <a href="/my-tasks?filter=redo"{% if active == 'redo' %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_redo') }}</a>
+<p class="page-intro">{{ t('my_tasks.intro_all') if everyone else (t('my_tasks.intro_trainer') if identity.is_trainer else t('my_tasks.intro_apprentice')) }}</p>
+{% if scope_links %}
+<nav class="filter-tabs filter-scope" aria-label="{{ t('my_tasks.scope') }}">
+  {% for l in scope_links %}<a href="{{ l.url }}"{% if l.current %} aria-current="page"{% endif %}>{{ l.label }}</a>{% endfor %}
 </nav>
+{% endif %}
+<nav class="filter-tabs" aria-label="{{ t('my_tasks.filter') }}">
+  {% for l in status_links %}<a href="{{ l.url }}"{% if l.current %} aria-current="page"{% endif %}>{{ l.label }}</a>{% endfor %}
+</nav>
+{% if sup_links %}
+<nav class="filter-chips" aria-label="{{ t('my_tasks.sup_filter') }}">
+  <span class="micro-label">{{ t('my_tasks.sup_filter') }}</span>
+  {% for l in sup_links %}<a href="{{ l.url }}"{% if l.current %} aria-current="page"{% endif %}>{{ l.label }}</a>{% endfor %}
+</nav>
+{% endif %}
 {% for g in groups %}
 <section class="task-group">
   <h2 class="section-title"><a href="{{ g.link }}">{{ g.title }}</a> <span class="mono muted">{{ t('index.progress', done=g.done, total=g.total) }}</span></h2>
@@ -45,6 +53,6 @@
   {% endif %}
 </section>
 {% else %}
-<p class="empty">{{ t('mine.empty') if identity.is_trainer else t('index.empty') }}</p>
+<p class="empty">{{ (t('my_tasks.nothing_open') if active == 'open' else t('my_tasks.nothing_found')) if filtered else (t('mine.empty') if identity.is_trainer and not everyone else t('index.empty')) }}</p>
 {% endfor %}
 {% endblock %}

@@ -96,3 +96,59 @@ def test_status_filters(config):
         fallback = anna.get("/my-tasks?filter=<x>").text
         assert '<a href="/my-tasks" aria-current="page">Alle</a>' in fallback
         assert "task-t1" in fallback and "task-t2" in fallback
+
+
+def test_apprentice_supervisor_filter(config):
+    with open_client(config, "boss") as boss:
+        anna = second_client(boss, "anna")
+        anna.patch(f"{API}/tasks/t2", json={"done": True}, headers=JSON_HEADERS)
+        html = anna.get("/my-tasks").text
+        # Two Fachbetreuer involved -> filter is shown.
+        assert 'aria-label="Fachbetreuer"' in html
+        assert 'href="/my-tasks?sup=boss">Chefin Boss</a>' in html
+        assert 'href="/my-tasks?sup=kai">Kai Schulz</a>' in html
+        kai_only = anna.get("/my-tasks?sup=kai").text
+        assert "task-t2" in kai_only and "task-t1" not in kai_only
+        assert 'href="/my-tasks?sup=kai" aria-current="page"' in kai_only
+        # Combined with a status filter; links keep the other filter.
+        combined = anna.get("/my-tasks?filter=open&sup=kai").text
+        assert "Hier ist gerade nichts offen." in combined
+        assert 'href="/my-tasks?filter=ok&amp;sup=kai"' in combined
+        # Unknown Fachbetreuer values are ignored.
+        assert "task-t1" in anna.get("/my-tasks?sup=ghost").text
+
+
+def test_supervisor_filter_hidden_with_single_supervisor(config):
+    text = config.paths.users.read_text().replace("        tasks:\n          t2: kai\n", "")
+    config.paths.users.write_text(text, encoding="utf-8")
+    with open_client(config, "anna") as anna:
+        html = anna.get("/my-tasks").text
+    assert 'aria-label="Fachbetreuer"' not in html
+
+
+def test_trainer_all_scope_with_supervisor_filter(config):
+    add_user(config, "ben", "apprentice", name="Ben Azubi")  # no Fachbetreuer assigned
+    with open_client(config, "boss") as boss:
+        mine = boss.get("/my-tasks").text
+        assert '<a href="/my-tasks" aria-current="page">Meine</a>' in mine
+        assert "Ben Azubi" not in mine and 'aria-label="Fachbetreuer"' not in mine
+
+        everyone = boss.get("/my-tasks?scope=all").text
+        assert '<a href="/my-tasks?scope=all" aria-current="page">Alle Fachbetreuer</a>' in everyone
+        assert "Anna Azubi · Demo" in everyone and "Ben Azubi · Demo" in everyone
+        assert 'href="/my-tasks?sup=kai&amp;scope=all">Kai Schulz</a>' in everyone
+        assert 'href="/my-tasks?sup=-&amp;scope=all">ohne Fachbetreuer</a>' in everyone
+
+        kai = boss.get("/my-tasks?scope=all&sup=kai").text  # Vertretung für Kai
+        assert 'href="/workbooks/demo/users/anna#task-t2"' in kai
+        assert "task-t1" not in kai and "Ben Azubi" not in kai
+
+        nobody = boss.get("/my-tasks?scope=all&sup=-").text
+        assert "Ben Azubi · Demo" in nobody and "Anna Azubi" not in nobody
+
+
+def test_apprentice_cannot_use_all_scope(config):
+    with open_client(config, "anna") as anna:
+        html = anna.get("/my-tasks?scope=all").text
+    assert "Alle Fachbetreuer" not in html
+    assert "Anna Azubi ·" not in html  # still only her own workbooks

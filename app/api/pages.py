@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
@@ -265,6 +266,7 @@ class TaskRow:
     state_label: str
     done_at: object
     supervisor: str
+    supervisor_id: str  # username, "" when nobody is assigned
     comment: str
     link: str
 
@@ -309,6 +311,7 @@ def _rows(request, view, progress, user, username_for_link, task_ids=None) -> li
                         state_label=t(STATE_KEYS[state]),
                         done_at=tp.done_at if tp and tp.done else None,
                         supervisor=names.get(sup, sup) if sup else "",
+                        supervisor_id=sup or "",
                         comment=tp.review.comment if tp and tp.review else "",
                         link=f"{base}#task-{tv.task.id}",
                     )
@@ -321,39 +324,51 @@ TASK_FILTERS = {
     "apprentice": {"open": {"open", "redo"}, "ok": {"ok"}, "redo": {"redo"}},
     "trainer": {"open": {"waiting", "recheck"}, "ok": {"ok"}, "redo": {"redo"}},
 }
+NO_SUPERVISOR = "-"  # value of the supervisor filter for tasks without Fachbetreuer
 
 
-@router.get("/my-tasks", response_class=HTMLResponse)
-def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HTMLResponse:
+@dataclass
+class FilterLink:
+    label: str
+    url: str
+    current: bool
+
+
+def _url(**params: str) -> str:
+    defaults = {"filter": "all", "scope": "mine"}
+    query = "&".join(f"{k}={quote(v)}" for k, v in params.items() if v and v != defaults.get(k))
+    return "/my-tasks" + (f"?{query}" if query else "")
+
+
+def _apprentice_groups(request: Request, identity: Identity) -> list[TaskGroup]:
     registry = request.app.state.registry
     store = request.app.state.progress
-    states = TASK_FILTERS[identity.user.role].get(filter)
-    active = filter if states else "all"
-    groups: list[TaskGroup] = []
-    if identity.user.role == "apprentice":
-        for wid in registry.catalogs():
-            view = registry.view(wid) if identity.user.may_open(wid) else None
-            if view is None:
-                continue
-            progress = store.load(wid, identity.username)
-            rows = _rows(request, view, progress, identity.user, None)
-            if states:
-                rows = [r for r in rows if r.state in states]
-            groups.append(
-                TaskGroup(
-                    title=view.meta.title,
-                    link=f"/workbooks/{wid}",
-                    rows=rows,
-                    done=progress.done_count(set(view.tasks_by_id)),
-                    total=view.task_count,
-                )
+    groups = []
+    for wid in registry.catalogs():
+        view = registry.view(wid) if identity.user.may_open(wid) else None
+        if view is None:
+            continue
+        progress = store.load(wid, identity.username)
+        groups.append(
+            TaskGroup(
+                title=view.meta.title,
+                link=f"/workbooks/{wid}",
+                rows=_rows(request, view, progress, identity.user, None),
+                done=progress.done_count(set(view.tasks_by_id)),
+                total=view.task_count,
             )
-    else:
+        )
+    return groups
+
+
+def _trainer_groups(request: Request, identity: Identity, everyone: bool) -> list[TaskGroup]:
+    store = request.app.state.progress
+    registry = request.app.state.registry
+    groups = []
+    if not everyone:
         for a in assignments_for(request, identity.username):
             progress = store.load(a.view.meta.id, a.username)
             rows = _rows(request, a.view, progress, a.user, a.username, set(a.tasks))
-            if states:
-                rows = [r for r in rows if r.state in states]
             groups.append(
                 TaskGroup(
                     title=f"{a.user.name} · {a.view.meta.title}",
@@ -363,4 +378,100 @@ def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HT
                     total=a.pv.total,
                 )
             )
-    return render(request, "my_tasks.html", groups=groups, active=active)
+        return groups
+    users = request.app.state.users.all()
+    for username, user in sorted(users.items(), key=lambda item: item[1].name.lower()):
+        if user.role != "apprentice" or not user.active:
+            continue
+        for wid in registry.catalogs():
+            view = registry.view(wid) if user.may_open(wid) else None
+            if view is None:
+                continue
+            progress = store.load(wid, username)
+            groups.append(
+                TaskGroup(
+                    title=f"{user.name} · {view.meta.title}",
+                    link=f"/workbooks/{wid}/users/{username}",
+                    rows=_rows(request, view, progress, user, username),
+                    done=progress.done_count(set(view.tasks_by_id)),
+                    total=view.task_count,
+                )
+            )
+    return groups
+
+
+@router.get("/my-tasks", response_class=HTMLResponse)
+def my_tasks(
+    request: Request,
+    identity: CurrentUser,
+    filter: str = "all",
+    sup: str = "",
+    scope: str = "mine",
+) -> HTMLResponse:
+    t = request.app.state.translator
+    role = identity.user.role
+    states = TASK_FILTERS[role].get(filter)
+    active = filter if states else "all"
+    everyone = identity.is_trainer and scope == "all"
+    scope = "all" if everyone else "mine"
+
+    if identity.is_trainer:
+        groups = _trainer_groups(request, identity, everyone)
+    else:
+        groups = _apprentice_groups(request, identity)
+
+    # Fachbetreuer filter: apprentices (if more than one is involved) and the
+    # "all Fachbetreuer" view of Fachbetreuer.
+    names = {n: u.name for n, u in request.app.state.users.all().items()}
+    present = sorted(
+        {r.supervisor_id for g in groups for r in g.rows},
+        key=lambda u: (u == "", names.get(u, u).lower()),
+    )
+    show_sup_filter = everyone or (not identity.is_trainer and len(present) > 1)
+    if not show_sup_filter or (sup and sup != NO_SUPERVISOR and sup not in present):
+        sup = ""
+    sup_links: list[FilterLink] = []
+    if show_sup_filter:
+        sup_links.append(
+            FilterLink(t("my_tasks.sup_all"), _url(filter=active, scope=scope), not sup)
+        )
+        for username in present:
+            value = username or NO_SUPERVISOR
+            label = names.get(username, username) if username else t("my_tasks.sup_none")
+            sup_links.append(
+                FilterLink(label, _url(filter=active, sup=value, scope=scope), sup == value)
+            )
+
+    filtered = bool(states or sup)
+    for g in groups:
+        if states:
+            g.rows = [r for r in g.rows if r.state in states]
+        if sup:
+            wanted = "" if sup == NO_SUPERVISOR else sup
+            g.rows = [r for r in g.rows if r.supervisor_id == wanted]
+    if filtered:
+        groups = [g for g in groups if g.rows]
+
+    open_label = "my_tasks.filter_open_trainer" if identity.is_trainer else "my_tasks.filter_open"
+    status_links = [
+        FilterLink(t(label), _url(filter=key, sup=sup, scope=scope), active == key)
+        for key, label in (("all", "my_tasks.filter_all"), ("open", open_label),
+                           ("ok", "my_tasks.filter_ok"), ("redo", "my_tasks.filter_redo"))
+    ]  # fmt: skip
+    scope_links = []
+    if identity.is_trainer:
+        scope_links = [
+            FilterLink(t("my_tasks.scope_mine"), _url(filter=active), not everyone),
+            FilterLink(t("my_tasks.scope_all"), _url(filter=active, scope="all"), everyone),
+        ]
+    return render(
+        request,
+        "my_tasks.html",
+        groups=groups,
+        active=active,
+        filtered=filtered,
+        everyone=everyone,
+        status_links=status_links,
+        sup_links=sup_links,
+        scope_links=scope_links,
+    )

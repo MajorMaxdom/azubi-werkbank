@@ -4,7 +4,17 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.2.1] - 2026-10-06
+## [1.3.0] - 2026-10-06
+
+### Added
+- "Meine Aufgaben" — Fachbetreuer filter, combinable with the status
+  filters. Apprentices see it as soon as more than one Fachbetreuer is
+  involved in their workbooks.
+- Fachbetreuer can switch between "Meine" and "Alle Fachbetreuer" (all tasks
+  of all active apprentices, e.g. to stand in for a colleague) and filter by
+  Fachbetreuer, including "ohne Fachbetreuer".
+
+ - 2026-10-06
 
 ### Added
 - "Meine Aufgaben": filters "Geprüft – OK" and "Nacharbeiten" next to

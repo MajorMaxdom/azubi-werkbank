@@ -98,6 +98,13 @@ my_tasks:
   filter_open_trainer: Nur zu prüfen
   filter_ok: Geprüft – OK
   filter_redo: Nacharbeiten
+  scope: Ansicht
+  scope_mine: Meine
+  scope_all: Alle Fachbetreuer
+  intro_all: Alle Aufgaben aller aktiven Azubis – zum Beispiel für Vertretungen. Bewerten kannst du jede Aufgabe.
+  sup_filter: Fachbetreuer
+  sup_all: Alle
+  sup_none: ohne Fachbetreuer
   number: Nr.
   task: Aufgabe
   status: Status

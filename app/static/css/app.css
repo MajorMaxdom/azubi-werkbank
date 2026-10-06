@@ -897,6 +897,19 @@ details.overrides .table-wrap { margin: 0; padding: 0 12px 12px; }
 }
 .filter-tabs a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 .filter-tabs a:hover { color: var(--accent); }
+.filter-scope { margin-bottom: 12px; }
+.filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: -12px 0 24px; }
+.filter-chips .micro-label { margin-right: 4px; }
+.filter-chips a {
+  padding: 3px 10px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.filter-chips a:hover { color: var(--accent); border-color: var(--accent); }
+.filter-chips a[aria-current="page"] { color: var(--card); background: var(--accent); border-color: var(--accent); }
 .task-group { margin-bottom: 32px; }
 .task-group .section-title { margin-bottom: 10px; }
 .task-group .section-title a { text-decoration: none; }
