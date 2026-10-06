@@ -27,7 +27,7 @@
   {% endif %}
 
   {% if task.hints %}
-  <details class="hints">
+  <details class="hints"{% if export %} open{% endif %}>
     <summary>{{ icon('chevron-right') }}{{ icon('lightbulb') }}<span>{{ t('task.hints') }}</span></summary>
     <div class="details-body prose">{{ task.hints | md }}</div>
   </details>
@@ -37,13 +37,18 @@
   {% include "partials/answer.html" %}
   {% endfor %}
 
+  {% if export %}
+  {% set tp = pv.task(task.id) %}
+  <p class="done-row done-text{% if tp and tp.done %} is-done{% endif %}">{% if tp and tp.done %}{{ icon('check') }}{{ t('export.done_at', date=tp.done_at | de_date) if tp.done_at else t('export.done') }}{% else %}{{ t('export.not_done') }}{% endif %}</p>
+  {% else %}
   <div class="done-row">
     <input type="checkbox" id="done-{{ task.id }}" data-done{% if pv.is_done(task.id) %} checked{% endif %}{% if locked %} disabled{% endif %}>
-    <label for="done-{{ task.id }}">{{ t('task.mark_done') }}</label>
+    <label for="done-{{ task.id }}">{{ t('task.mark_done') }}<span class="visually-hidden"> ({{ tv.number }})</span></label>
   </div>
+  {% endif %}
 
   {% if task.bonus %}
-  <details class="bonus">
+  <details class="bonus"{% if export %} open{% endif %}>
     <summary>{{ icon('chevron-right') }}{{ icon('plus') }}<span>{{ t('task.bonus') }}</span></summary>
     <div class="details-body prose">{{ task.bonus | md }}</div>
   </details>
@@ -73,17 +78,26 @@
     {% if task.trainer and task.trainer.notes %}
     <div class="trainer-notes prose"><strong>{{ t('trainer.notes') }}</strong>{{ task.trainer.notes | md }}</div>
     {% endif %}
+    {% if export %}
+    <p class="trainer-result">
+      <strong>{{ t('trainer.status') }}:</strong>
+      {% if rv and rv.status == 'ok' %}{{ t('trainer.status_ok') }}{% elif rv and rv.status == 'redo' %}{{ t('trainer.status_redo') }}{% else %}{{ t('export.not_reviewed') }}{% endif %}
+      {% if rv and rv.reviewed_by and review %}<span class="trainer-meta">· {{ t('review.reviewed', name=review.name(rv.reviewed_by), date=rv.reviewed_at | de_date) }}</span>{% endif %}
+    </p>
+    {% if rv and rv.comment %}<p class="review-comment">{{ rv.comment }}</p>{% endif %}
+    {% else %}
     <div class="trainer-row">
-      <label class="visually-hidden" for="status-{{ task.id }}">{{ t('trainer.status') }}</label>
+      <label class="visually-hidden" for="status-{{ task.id }}">{{ t('trainer.status') }} ({{ tv.number }})</label>
       <select id="status-{{ task.id }}" class="review-select{% if rv and rv.status %} is-{{ rv.status }}{% endif %}" data-review-status{% if not review %} disabled{% endif %}>
         <option value="">{{ t('trainer.status_none') }}</option>
         <option value="ok"{% if rv and rv.status == 'ok' %} selected{% endif %}>{{ t('trainer.status_ok') }}</option>
         <option value="redo"{% if rv and rv.status == 'redo' %} selected{% endif %}>{{ t('trainer.status_redo') }}</option>
       </select>
-      <label class="visually-hidden" for="comment-{{ task.id }}">{{ t('trainer.comment') }}</label>
+      <label class="visually-hidden" for="comment-{{ task.id }}">{{ t('trainer.comment') }} ({{ tv.number }})</label>
       <textarea id="comment-{{ task.id }}" data-review-comment rows="2" placeholder="{{ t('trainer.comment_placeholder') }}"{% if not review %} disabled{% endif %}>{{ rv.comment if rv else '' }}</textarea>
     </div>
-    {% if review and rv and rv.reviewed_by %}<p class="trainer-meta">{{ t('review.reviewed', name=review.name(rv.reviewed_by), date=rv.reviewed_at.astimezone().strftime('%d.%m.%Y %H:%M')) }}</p>{% endif %}
+    {% endif %}
+    {% if review and rv and rv.reviewed_by and not export %}<p class="trainer-meta">{{ t('review.reviewed', name=review.name(rv.reviewed_by), date=rv.reviewed_at.astimezone().strftime('%d.%m.%Y %H:%M')) }}</p>{% endif %}
   </div>
   {% endif %}
 </article>

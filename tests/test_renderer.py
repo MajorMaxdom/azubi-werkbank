@@ -142,7 +142,10 @@ def test_answer_types_render(catalog_data):
     ]
     html = render_static(Catalog.model_validate(catalog_data))
     assert '<textarea id="a-t1-txt" rows="6"' in html
-    assert '<textarea id="a-t1-mono" class="mono-input" rows="4"' in html
+    mono = (
+        '<textarea id="a-t1-mono" aria-label="Antwort zu Aufgabe 1.1: Aufgabe" class="mono-input"'
+    )
+    assert mono in html
     assert '<input id="a-t1-sh" type="text" value="" placeholder="P">' in html
     assert html.count('type="checkbox" name="a-t1-cl"') == 2
     assert html.count('type="radio" name="a-t1-ch"') == 2

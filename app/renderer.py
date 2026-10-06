@@ -13,6 +13,7 @@ from datetime import date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markdown_it import MarkdownIt
@@ -269,25 +270,60 @@ def static_asset_url(workbooks_dir: Path):
     return resolve
 
 
+@dataclass
+class ReviewContext:
+    """The apprentice a Fachbetreuer is looking at (review view and trainer export)."""
+
+    username: str
+    user: Any
+    supervisors: dict[str, str]  # task id -> Fachbetreuer display name
+    names: dict[str, str]  # username -> display name
+    orphans: list
+
+    def name(self, username: str | None) -> str:
+        if not username:
+            return ""
+        return self.names.get(username, username)
+
+
+@dataclass
+class ExportInfo:
+    """Header data of an exported snapshot."""
+
+    name: str  # whose workbook (display name), empty for a blank workbook
+    username: str
+    exported_at: datetime
+
+
 def render_static(
     catalog: Catalog,
     *,
     trainer: bool = True,
     workbooks_dir: Path | None = None,
     t: Translator | None = None,
+    progress: Progress | None = None,
+    export: ExportInfo | None = None,
+    review: ReviewContext | None = None,
+    view: WorkbookView | None = None,
 ) -> str:
-    """Render a self-contained HTML preview with tokens and theme inlined."""
+    """Render a self-contained HTML file with tokens, theme and fonts inlined.
+
+    Without ``export`` this is the authoring preview (``workbook render``).
+    With ``export`` it is a print-friendly snapshot of one user's answers.
+    """
     env = create_environment(t)
-    view = build_view(catalog, t)
+    view = view or build_view(catalog, t)
     template = env.get_template("workbook.html")
     return template.render(
         wb=view,
         is_trainer=trainer,
         static=True,
+        export=export,
+        review=review,
         inline_css=Markup(inline_base_css()),
         inline_theme=Markup(view.theme_css),
         asset_url=static_asset_url(workbooks_dir or ROOT / "workbooks"),
-        pv=build_progress_view(view, None, editable=False),
+        pv=build_progress_view(view, progress, editable=False),
     )
 
 

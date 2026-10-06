@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,7 +16,14 @@ from app.auth import Forbidden, Identity, get_current_user
 from app.models.catalog import ID_PATTERN, is_safe_asset_path
 from app.models.users import User
 from app.progress import needs_check, orphaned_answers, responsible_tasks
-from app.renderer import ProgressView, WorkbookView, build_progress_view
+from app.renderer import (
+    ExportInfo,
+    ProgressView,
+    ReviewContext,
+    WorkbookView,
+    build_progress_view,
+    render_static,
+)
 
 router = APIRouter()
 
@@ -121,20 +129,6 @@ def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLR
     )
 
 
-@dataclass
-class ReviewContext:
-    username: str
-    user: User
-    supervisors: dict[str, str]  # task id -> Fachbetreuer display name
-    names: dict[str, str]  # username -> display name
-    orphans: list
-
-    def name(self, username: str | None) -> str:
-        if not username:
-            return ""
-        return self.names.get(username, username)
-
-
 @router.get("/workbooks/{workbook_id}/users/{username}", response_class=HTMLResponse)
 def review(request: Request, workbook_id: str, username: str, identity: CurrentUser):
     if not identity.is_trainer:
@@ -195,3 +189,58 @@ def asset(request: Request, path: str, identity: CurrentUser) -> FileResponse:
     if not target.is_relative_to(root) or not target.is_file():
         raise HTTPException(status_code=404)
     return FileResponse(target)
+
+
+@router.get("/workbooks/{workbook_id}/export")
+def export(request: Request, workbook_id: str, identity: CurrentUser, user: str | None = None):
+    """Self-contained, print-friendly HTML snapshot (download)."""
+    view = get_view(request, workbook_id, identity)
+    users = request.app.state.users
+    review = None
+    if user is not None and user != identity.username:
+        if not identity.is_trainer:
+            raise Forbidden
+        target = users.get(user) if _ID_RE.fullmatch(user) else None
+        if target is None or target.role != "apprentice" or not target.may_open(workbook_id):
+            raise HTTPException(status_code=404)
+        username, display = user, target.name
+    elif identity.is_trainer:
+        username, display = None, ""
+    else:
+        username, display = identity.username, identity.user.name
+
+    progress = request.app.state.progress.load(workbook_id, username) if username else None
+    if identity.is_trainer and username:
+        names = {name: u.name for name, u in users.all().items()}
+        target = users.get(username)
+        supervisors = {}
+        for tid in view.tasks_by_id:
+            sup = target.supervisor_for(workbook_id, tid)
+            if sup:
+                supervisors[tid] = names.get(sup, sup)
+        review = ReviewContext(
+            username=username,
+            user=target,
+            supervisors=supervisors,
+            names=names,
+            orphans=orphaned_answers(view.catalog, progress),
+        )
+    now = datetime.now(UTC)
+    html = render_static(
+        view.catalog,
+        trainer=identity.is_trainer,
+        workbooks_dir=request.app.state.config.paths.workbooks,
+        t=request.app.state.translator,
+        progress=progress,
+        export=ExportInfo(name=display, username=username or "", exported_at=now),
+        review=review,
+        view=view,
+    )
+    filename = f"arbeitsheft_{workbook_id}_{username or 'leer'}_{now:%Y-%m-%d}.html"
+    return HTMLResponse(
+        html,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )

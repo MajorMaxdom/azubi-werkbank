@@ -2,7 +2,10 @@
 {% set so_locked = not review %}
 <section class="signoff" id="signoff">
   <h2>{{ wb.meta.signoff.title or t('signoff.title') }}</h2>
-  {% if is_trainer %}
+  {% if export %}
+  {% if so and so.comment %}<div class="signoff-comment">{{ so.comment }}</div>{% endif %}
+  <p class="signoff-meta">{% if so and so.date %}{{ t('signoff.done', date=so.date | de_date) }}{% if so.by and review %} · {{ t('signoff.by') }}: {{ review.name(so.by) }}{% endif %}{% else %}{{ t('export.not_signed') }}{% endif %}</p>
+  {% elif is_trainer %}
   <label class="micro-label" for="signoff-comment">{{ t('signoff.comment') }}</label>
   <textarea id="signoff-comment" data-signoff="comment" rows="5" placeholder="{{ t('signoff.comment_placeholder') }}"{% if so_locked %} disabled{% endif %}>{{ so.comment if so else '' }}</textarea>
   <div class="field-grid">

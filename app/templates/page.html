@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block body_class %}{{ 'page' }}{% endblock %}
 {% block body %}
+<a class="skip-link" href="#main">{{ t('a11y.skip') }}</a>
 <header class="topbar">
   <a class="brand" href="/">{{ t('app.name') }}</a>
   {% include "partials/user_menu.html" %}
 </header>
-<main class="sheet {% block sheet_class %}sheet-wide{% endblock %}">
+<main id="main" class="sheet {% block sheet_class %}sheet-wide{% endblock %}">
 {% block content %}{% endblock %}
 </main>
 {% block scripts %}{% endblock %}

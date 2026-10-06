@@ -1,0 +1,15 @@
+{
+  "yaml.schemas": {
+    "./docs/workbook.schema.json": [
+      "workbooks/*.yaml",
+      "workbooks/*.yml",
+      "docs/workbook-template.yaml"
+    ]
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["workbooks/*.json"],
+      "url": "./docs/workbook.schema.json"
+    }
+  ]
+}

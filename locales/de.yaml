@@ -33,6 +33,18 @@ autosave:
   logged_out: Abgemeldet – bitte neu anmelden, ungespeicherte Änderungen gehen sonst verloren
   unsaved: Es gibt noch nicht gespeicherte Änderungen.
 
+export:
+  link: Export / Drucken
+  link_hint: Lädt eine HTML-Datei mit allen Antworten herunter, die offline geöffnet und gedruckt werden kann.
+  header: "Arbeitsheft von {name} · exportiert am {date}"
+  header_blank: "Leeres Arbeitsheft · exportiert am {date}"
+  no_answer: (keine Antwort)
+  done: Erledigt
+  done_at: "Erledigt am {date}"
+  not_done: Noch nicht erledigt
+  not_reviewed: noch nicht bewertet
+  not_signed: Noch nicht abgenommen.
+
 workbook:
   preview_trainer: "Vorschau: Als Fachbetreuer kannst du in diesem Heft keine Antworten speichern."
 
@@ -106,6 +118,10 @@ signoff:
 
 app:
   name: Arbeitshefte
+
+a11y:
+  skip: Zum Inhalt springen
+  answer_for: "Antwort zu Aufgabe {number}: {title}"
 
 events:
   updated: Dieses Heft wurde aktualisiert –

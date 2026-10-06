@@ -4,7 +4,29 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.6.0] - 2026-10-06
+## [1.0.0] - 2026-10-06
+
+### Added
+- Export `GET /workbooks/{workbook}/export` (button "Export / Drucken"): a
+  self-contained HTML snapshot with answers, done dates, review results and
+  sign-off; fonts, tokens and the workbook theme are inlined, hints and bonus
+  expanded, so it opens offline and prints cleanly. Fachbetreuer export any
+  apprentice with `?user=` (including expectations and review details) or a
+  blank workbook.
+- `workbook schema -o FILE` exports the JSON Schema of the catalog format
+  with a description for every key; `docs/workbook.schema.json` and
+  `.vscode/settings.json` give autocompletion and live checks in VS Code.
+- `docs/AUTHORING.md`: how to write a workbook; top-level `README.md`.
+- Accessibility: skip link, labels for every form control (including
+  answers without a label and per-task review fields), module LED summaries
+  with the real count, reduced-motion support, visible focus everywhere.
+
+### Changed
+- Small coloured text (level badges, trainer heading, error messages) and
+  placeholders are slightly darkened via `color-mix` with `--ink` so every
+  default colour combination meets WCAG AA (4.5:1); tokens are unchanged.
+
+ - 2026-10-06
 
 ### Added
 - `deploy/Caddyfile` (TLS, HSTS, CSP and the other security headers from the

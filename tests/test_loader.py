@@ -168,3 +168,20 @@ def test_cli_render_invalid_file(tmp_path):
     result = CliRunner().invoke(app, ["render", str(bad), "-o", str(tmp_path / "o.html")])
     assert result.exit_code == 1
     assert not (tmp_path / "o.html").exists()
+
+
+def test_committed_json_schema_is_up_to_date():
+    from app.models.catalog import catalog_json_schema
+
+    committed = (ROOT / "docs" / "workbook.schema.json").read_text(encoding="utf-8")
+    assert committed == catalog_json_schema(), "run: workbook schema -o docs/workbook.schema.json"
+
+
+def test_cli_schema(tmp_path):
+    out = tmp_path / "s.json"
+    result = CliRunner().invoke(app, ["schema", "-o", str(out)])
+    assert result.exit_code == 0, result.output
+    schema = json.loads(out.read_text(encoding="utf-8"))
+    assert schema["$schema"].endswith("2020-12/schema")
+    assert schema["$defs"]["Task"]["additionalProperties"] is False
+    assert "Never change it" in schema["$defs"]["Task"]["properties"]["id"]["description"]

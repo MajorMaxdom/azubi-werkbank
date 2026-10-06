@@ -74,6 +74,19 @@ def render(
     typer.echo(f"Wrote {output}")
 
 
+@app.command()
+def schema(
+    output: Path = typer.Option(
+        Path("workbook.schema.json"), "-o", "--output", help="Output file for the JSON Schema."
+    ),
+) -> None:
+    """Export the JSON Schema of the catalog format (for editor autocompletion)."""
+    from app.models.catalog import catalog_json_schema
+
+    output.write_text(catalog_json_schema(), encoding="utf-8")
+    typer.echo(f"Wrote {output}")
+
+
 user_app = typer.Typer(help="Manage users (users.yaml + credentials).", no_args_is_help=True)
 app.add_typer(user_app, name="user")
 

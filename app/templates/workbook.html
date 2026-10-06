@@ -5,10 +5,11 @@
 <link rel="stylesheet" href="/workbooks/{{ wb.meta.id }}/theme.css?v={{ wb.theme_hash }}">
 {% endif %}
 {% endblock %}
-{% block body_class %}{{ 'workbook is-trainer' if is_trainer else 'workbook' }}{% endblock %}
+{% block body_class %}{{ 'workbook' }}{{ ' is-trainer' if is_trainer else '' }}{{ ' is-export' if export else '' }}{{ ' is-trainer-export' if export and is_trainer else '' }}{% endblock %}
 {% block body %}
+<a class="skip-link" href="#main">{{ t('a11y.skip') }}</a>
 {% set locked = not pv.editable and not static %}
-{% set autosave = pv.editable or review %}
+{% set autosave = (pv.editable or review) and not static %}
 <div class="sticky-head">
   {% if not static %}
   <div class="update-banner" data-update-banner hidden>
@@ -23,6 +24,7 @@
       <span class="progress-text" data-progress-text>{{ t('topbar.progress', done=pv.done, total=wb.task_count, percent=pv.percent) }}</span>
     </div>
     {% if autosave %}<span class="save-status" data-save-status role="status" aria-live="polite"></span>{% endif %}
+    {% if not static %}<a class="topbar-button" href="/workbooks/{{ wb.meta.id }}/export{% if review %}?user={{ review.username }}{% endif %}" title="{{ t('export.link_hint') }}">{{ t('export.link') }}</a>{% endif %}
     {% include "partials/user_menu.html" %}
   </header>
   <nav class="quicknav" aria-label="{{ t('nav.label') }}">
@@ -32,12 +34,14 @@
   </nav>
 </div>
 
-<main class="sheet" data-workbook="{{ wb.meta.id }}"{% if review %} data-review-user="{{ review.username }}"{% endif %}{% if autosave %} data-autosave
+<main id="main" class="sheet" data-workbook="{{ wb.meta.id }}"{% if review and not static %} data-review-user="{{ review.username }}"{% endif %}{% if autosave %} data-autosave
   data-text-saving="{{ t('autosave.saving') }}" data-text-saved="{{ t('autosave.saved') }}"
   data-text-offline="{{ t('autosave.offline') }}" data-text-error="{{ t('autosave.error') }}"
   data-text-logged-out="{{ t('autosave.logged_out') }}" data-text-unsaved="{{ t('autosave.unsaved') }}"
   data-text-progress="{{ t('topbar.progress', done='{done}', total='{total}', percent='{percent}') }}"{% endif %}>
-  {% if review %}
+  {% if export %}
+  <p class="export-bar">{{ t('export.header', name=export.name, date=export.exported_at | de_date) if export.name else t('export.header_blank', date=export.exported_at | de_date) }}</p>
+  {% elif review %}
   <p class="review-bar">
     <span>{{ t('review.bar', name=review.user.name, username=review.username) }}</span>
     <a href="/admin/overview#{{ wb.meta.id }}">{{ t('review.to_overview') }}</a>
@@ -50,11 +54,16 @@
     <div class="field-grid">
       {% for f in wb.meta.header_fields %}
       <div class="field">
+        {% if export %}
+        <span class="micro-label">{{ f.label }}</span>
+        <p class="field-value">{{ (pv.header(f.id) | de_date if f.type == 'date' else pv.header(f.id)) or '–' }}</p>
+        {% else %}
         <label class="micro-label" for="h-{{ f.id }}">{{ f.label }}</label>
         {% if f.type == 'text' %}
         <textarea id="h-{{ f.id }}" data-header="{{ f.id }}" rows="3"{% if f.placeholder %} placeholder="{{ f.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>{{ pv.header(f.id) }}</textarea>
         {% else %}
         <input id="h-{{ f.id }}" data-header="{{ f.id }}" type="{{ 'date' if f.type == 'date' else 'text' }}" value="{{ pv.header(f.id) }}"{% if f.placeholder %} placeholder="{{ f.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>
+        {% endif %}
         {% endif %}
       </div>
       {% endfor %}
@@ -77,7 +86,9 @@
       <div class="module-head">
         <span class="module-code">{{ m.module.code }}</span>
         <h3 class="module-title">{{ m.module.title }}</h3>
-        <span class="ports" data-ports role="img" aria-label="{{ t('module.ports_label', done=0, total=m.tasks | length) }}">
+        {% set ns = namespace(done=0) %}
+        {% for tv in m.tasks %}{% if pv.is_done(tv.task.id) %}{% set ns.done = ns.done + 1 %}{% endif %}{% endfor %}
+        <span class="ports" data-ports role="img" aria-label="{{ t('module.ports_label', done=ns.done, total=m.tasks | length) }}">
           {% for tv in m.tasks %}<span class="port{% if pv.review_status(tv.task.id) == 'redo' %} is-redo{% elif pv.is_done(tv.task.id) %} is-lit{% endif %}" data-port="{{ tv.task.id }}"></span>{% endfor %}
         </span>
       </div>

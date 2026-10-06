@@ -2,22 +2,25 @@
 {% set value = pv.answer(task.id, answer.id) %}
 <div class="answer answer-{{ answer.type }}" data-answer="{{ answer.id }}" data-type="{{ answer.type }}"{% if answer.multiple %} data-multiple{% endif %}>
   {% if answer.type in ('checklist', 'choice') %}
-  <fieldset>
+  <fieldset{% if not answer.label %} aria-label="{{ t('a11y.answer_for', number=tv.number, title=task.title) }}"{% endif %}>
     {% if answer.label %}<legend class="micro-label">{{ answer.label }}</legend>{% endif %}
     {% set multi = answer.type == 'checklist' or answer.multiple %}
     {% for option in (answer.items if answer.type == 'checklist' else answer.options) %}
     <label class="option">
-      <input type="{{ 'checkbox' if multi else 'radio' }}" name="{{ fid }}" value="{{ option }}"{% if (multi and value and option in value) or (not multi and value == option) %} checked{% endif %}{% if locked %} disabled{% endif %}>
+      <input type="{{ 'checkbox' if multi else 'radio' }}" name="{{ fid }}" value="{{ option }}"{% if (multi and value and option in value) or (not multi and value == option) %} checked{% endif %}{% if locked or export %} disabled{% endif %}>
       <span>{{ option }}</span>
     </label>
     {% endfor %}
   </fieldset>
+  {% elif export %}
+  {% if answer.label %}<span class="micro-label">{{ answer.label }}</span>{% endif %}
+  <div class="answer-value{% if answer.monospace %} is-mono{% endif %}{% if not value %} is-empty{% endif %}">{{ (value | de_date if answer.type == 'date' else value) if value else t('export.no_answer') }}</div>
   {% else %}
   {% if answer.label %}<label class="micro-label" for="{{ fid }}">{{ answer.label }}</label>{% endif %}
   {% if answer.type == 'text' %}
-  <textarea id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>{{ value or '' }}</textarea>
+  <textarea id="{{ fid }}"{% if not answer.label %} aria-label="{{ t('a11y.answer_for', number=tv.number, title=task.title) }}"{% endif %}{% if answer.monospace %} class="mono-input"{% endif %} rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>{{ value or '' }}</textarea>
   {% else %}
-  <input id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} type="{{ 'date' if answer.type == 'date' else 'text' }}" value="{{ value or '' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>
+  <input id="{{ fid }}"{% if not answer.label %} aria-label="{{ t('a11y.answer_for', number=tv.number, title=task.title) }}"{% endif %}{% if answer.monospace %} class="mono-input"{% endif %} type="{{ 'date' if answer.type == 'date' else 'text' }}" value="{{ value or '' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>
   {% endif %}
   {% endif %}
 </div>

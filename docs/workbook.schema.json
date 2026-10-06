@@ -1,0 +1,1241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Catalog",
+  "description": "Task catalog for the workbook server (see docs/AUTHORING.md).",
+  "$defs": {
+    "Answer": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique within the task; the answer is stored under it.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "default": "text",
+          "description": "text (multi-line) | short (one line) | checklist | choice | date",
+          "enum": [
+            "text",
+            "short",
+            "checklist",
+            "choice",
+            "date"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Label shown above the input.",
+          "title": "Label"
+        },
+        "placeholder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grey hint text inside the empty field (text/short).",
+          "title": "Placeholder"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Minimum height in px (text only).",
+          "title": "Height"
+        },
+        "items": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Checkbox items (required for checklist).",
+          "title": "Items"
+        },
+        "options": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Options (required for choice).",
+          "title": "Options"
+        },
+        "multiple": {
+          "default": false,
+          "description": "choice: allow several options (checkboxes instead of radio buttons).",
+          "title": "Multiple",
+          "type": "boolean"
+        },
+        "monospace": {
+          "default": false,
+          "description": "Fixed-width font for tables, protocols or command output (text/short).",
+          "title": "Monospace",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Answer",
+      "type": "object"
+    },
+    "Day": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Anchor for the quick navigation.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Day banner title.",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line below the day title.",
+          "title": "Subtitle"
+        },
+        "nav_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Short label in the quick navigation (default: title).",
+          "title": "Nav Label"
+        },
+        "nav_tag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Badge in the quick navigation (default: running number).",
+          "title": "Nav Tag"
+        },
+        "optional": {
+          "default": false,
+          "description": "Render as optional day.",
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "modules": {
+          "default": [],
+          "description": "Modules of this day.",
+          "items": {
+            "$ref": "#/$defs/Module"
+          },
+          "title": "Modules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "Day",
+      "type": "object"
+    },
+    "HeaderField": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique id within header_fields; progress is stored under it.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "Label shown above the field.",
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "default": "short",
+          "description": "date | short (one line) | text (multi-line).",
+          "enum": [
+            "date",
+            "short",
+            "text"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "placeholder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grey hint text inside the empty field.",
+          "title": "Placeholder"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "HeaderField",
+      "type": "object"
+    },
+    "ImageBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "image",
+          "title": "Type",
+          "type": "string"
+        },
+        "src": {
+          "minLength": 1,
+          "title": "Src",
+          "type": "string"
+        },
+        "alt": {
+          "minLength": 1,
+          "title": "Alt",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption"
+        }
+      },
+      "required": [
+        "type",
+        "src",
+        "alt"
+      ],
+      "title": "ImageBlock",
+      "type": "object"
+    },
+    "Level": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "description": "Badge text.",
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "color": {
+          "description": "blue | ochre | green | grey | red",
+          "enum": [
+            "blue",
+            "ochre",
+            "green",
+            "grey",
+            "red"
+          ],
+          "title": "Color",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Tooltip of the badge.",
+          "title": "Description"
+        }
+      },
+      "required": [
+        "label",
+        "color"
+      ],
+      "title": "Level",
+      "type": "object"
+    },
+    "LevelPalette": {
+      "additionalProperties": false,
+      "properties": {
+        "blue": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blue"
+        },
+        "ochre": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ochre"
+        },
+        "green": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Green"
+        },
+        "grey": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grey"
+        },
+        "red": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Red"
+        }
+      },
+      "title": "LevelPalette",
+      "type": "object"
+    },
+    "Module": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "description": "Unique module code, e.g. CRT-01.",
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "title": {
+          "description": "Module title.",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown learning objective ('Lernziel').",
+          "title": "Objective"
+        },
+        "tasks": {
+          "default": [],
+          "description": "Tasks of this module.",
+          "items": {
+            "$ref": "#/$defs/Task"
+          },
+          "title": "Tasks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "title"
+      ],
+      "title": "Module",
+      "type": "object"
+    },
+    "NoteBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "note",
+          "title": "Type",
+          "type": "string"
+        },
+        "variant": {
+          "default": "info",
+          "enum": [
+            "info",
+            "warning"
+          ],
+          "title": "Variant",
+          "type": "string"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "title": "NoteBlock",
+      "type": "object"
+    },
+    "QuestionsBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "questions",
+          "title": "Type",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "title": "QuestionsBlock",
+      "type": "object"
+    },
+    "Signoff": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Show the final sign-off section for Fachbetreuer.",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading of the sign-off section.",
+          "title": "Title"
+        }
+      },
+      "title": "Signoff",
+      "type": "object"
+    },
+    "SnippetBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "snippet",
+          "title": "Type",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "title": "SnippetBlock",
+      "type": "object"
+    },
+    "StepsBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "steps",
+          "title": "Type",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "title": "StepsBlock",
+      "type": "object"
+    },
+    "Stylesheet": {
+      "additionalProperties": false,
+      "properties": {
+        "paper": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paper"
+        },
+        "card": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Card"
+        },
+        "ink": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ink"
+        },
+        "muted": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Muted"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "accent": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accent"
+        },
+        "accent_hover": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accent Hover"
+        },
+        "accent_soft": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accent Soft"
+        },
+        "ok": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ok"
+        },
+        "redo": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redo"
+        },
+        "hint_bg": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hint Bg"
+        },
+        "trainer_bg": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trainer Bg"
+        },
+        "bonus_bg": {
+          "anyOf": [
+            {
+              "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bonus Bg"
+        },
+        "level_palette": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LevelPalette"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Stylesheet",
+      "type": "object"
+    },
+    "TableBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "table",
+          "title": "Type",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption"
+        },
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "rows": {
+          "default": [],
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "columns"
+      ],
+      "title": "TableBlock",
+      "type": "object"
+    },
+    "Task": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable id; progress is stored under it. Never change it once apprentices have started.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "number": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Display number; default: <day>.<position within the day>.",
+          "title": "Number"
+        },
+        "title": {
+          "description": "Task title.",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "level": {
+          "description": "Key from 'levels'.",
+          "minLength": 1,
+          "title": "Level",
+          "type": "string"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(\\d+h)?(\\d+m)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Expected effort: 30m, 1h, 1h30m. Summed up per day.",
+          "title": "Duration"
+        },
+        "requirement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown: the actual assignment.",
+          "title": "Requirement"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Monospace block, shown verbatim.",
+          "title": "Snippet"
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown per item: numbered click path.",
+          "title": "Steps"
+        },
+        "guiding_questions": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown per item: guiding questions.",
+          "title": "Guiding Questions"
+        },
+        "blocks": {
+          "anyOf": [
+            {
+              "items": {
+                "discriminator": {
+                  "mapping": {
+                    "image": "#/$defs/ImageBlock",
+                    "note": "#/$defs/NoteBlock",
+                    "questions": "#/$defs/QuestionsBlock",
+                    "snippet": "#/$defs/SnippetBlock",
+                    "steps": "#/$defs/StepsBlock",
+                    "table": "#/$defs/TableBlock",
+                    "text": "#/$defs/TextBlock"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/TextBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/TableBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/SnippetBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/StepsBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/QuestionsBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/ImageBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/NoteBlock"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free layout instead of requirement/snippet/steps/guiding_questions.",
+          "title": "Blocks"
+        },
+        "hints": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown: collapsible 'Hilfestellung'.",
+          "title": "Hints"
+        },
+        "answers": {
+          "default": [],
+          "description": "Input fields; each one is saved per user.",
+          "items": {
+            "$ref": "#/$defs/Answer"
+          },
+          "title": "Answers",
+          "type": "array"
+        },
+        "bonus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown: collapsible 'Extra' section.",
+          "title": "Bonus"
+        },
+        "trainer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Trainer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content visible only to Fachbetreuer."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "level"
+      ],
+      "title": "Task",
+      "type": "object"
+    },
+    "TextBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "text",
+          "title": "Type",
+          "type": "string"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "title": "TextBlock",
+      "type": "object"
+    },
+    "Trainer": {
+      "additionalProperties": false,
+      "properties": {
+        "expectations": {
+          "default": [],
+          "description": "Markdown bullet list 'Das sollte drinstehen' — only Fachbetreuer see it.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Expectations",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown internal notes — never shown to apprentices.",
+          "title": "Notes"
+        }
+      },
+      "title": "Trainer",
+      "type": "object"
+    },
+    "WorkbookMeta": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Used in URLs and progress paths. Never change it once apprentices have started.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "description": "Semantic version of the content, e.g. 1.0.0.",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+          "title": "Version",
+          "type": "string"
+        },
+        "title": {
+          "description": "Main heading.",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line below the title (shown in monospace caps style).",
+          "title": "Subtitle"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Short label in the top bar.",
+          "title": "Brand"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One or two sentences for the start page.",
+          "title": "Description"
+        },
+        "intro": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Markdown intro box below the header.",
+          "title": "Intro"
+        },
+        "header_fields": {
+          "default": [],
+          "description": "Extra per-user inputs in the document header.",
+          "items": {
+            "$ref": "#/$defs/HeaderField"
+          },
+          "title": "Header Fields",
+          "type": "array"
+        },
+        "footer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Small note at the bottom.",
+          "title": "Footer"
+        },
+        "signoff": {
+          "$ref": "#/$defs/Signoff",
+          "default": {
+            "enabled": true,
+            "title": null
+          },
+          "description": "Final Fachbetreuer sign-off."
+        },
+        "stylesheet": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stylesheet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional color overrides for this workbook (hex colors only)."
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "title"
+      ],
+      "title": "WorkbookMeta",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Version of the file format; always 1.",
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "workbook": {
+      "$ref": "#/$defs/WorkbookMeta",
+      "description": "Workbook metadata."
+    },
+    "levels": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Level"
+      },
+      "description": "Difficulty levels; tasks reference them by key.",
+      "minProperties": 1,
+      "title": "Levels",
+      "type": "object"
+    },
+    "days": {
+      "description": "Days -> modules -> tasks.",
+      "items": {
+        "$ref": "#/$defs/Day"
+      },
+      "title": "Days",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "workbook",
+    "levels",
+    "days"
+  ],
+  "type": "object"
+}

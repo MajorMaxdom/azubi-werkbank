@@ -40,7 +40,8 @@ LevelColor = Literal["blue", "ochre", "green", "grey", "red"]
 
 
 class Strict(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # Attribute docstrings become descriptions in the exported JSON Schema.
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
 
 # --------------------------------------------------------------------------- stylesheet
@@ -93,28 +94,45 @@ class Stylesheet(_ColorGroup):
 
 class HeaderField(Strict):
     id: Id
+    """Unique id within header_fields; progress is stored under it."""
     label: NonEmpty
+    """Label shown above the field."""
     type: Literal["date", "short", "text"] = "short"
+    """date | short (one line) | text (multi-line)."""
     placeholder: str | None = None
+    """Grey hint text inside the empty field."""
 
 
 class Signoff(Strict):
     enabled: bool = True
+    """Show the final sign-off section for Fachbetreuer."""
     title: str | None = None
+    """Heading of the sign-off section."""
 
 
 class WorkbookMeta(Strict):
     id: Id
+    """Used in URLs and progress paths. Never change it once apprentices have started."""
     version: SemVer
+    """Semantic version of the content, e.g. 1.0.0."""
     title: NonEmpty
+    """Main heading."""
     subtitle: str | None = None
+    """Line below the title (shown in monospace caps style)."""
     brand: str | None = None
+    """Short label in the top bar."""
     description: str | None = None
+    """One or two sentences for the start page."""
     intro: str | None = None
+    """Markdown intro box below the header."""
     header_fields: list[HeaderField] = []
+    """Extra per-user inputs in the document header."""
     footer: str | None = None
+    """Small note at the bottom."""
     signoff: Signoff = Signoff()
+    """Final Fachbetreuer sign-off."""
     stylesheet: Stylesheet | None = None
+    """Optional color overrides for this workbook (hex colors only)."""
 
     @field_validator("header_fields")
     @classmethod
@@ -125,8 +143,11 @@ class WorkbookMeta(Strict):
 
 class Level(Strict):
     label: NonEmpty
+    """Badge text."""
     color: LevelColor
+    """blue | ochre | green | grey | red"""
     description: str | None = None
+    """Tooltip of the badge."""
 
 
 # --------------------------------------------------------------------------- answers & blocks
@@ -134,14 +155,23 @@ class Level(Strict):
 
 class Answer(Strict):
     id: Id
+    """Unique within the task; the answer is stored under it."""
     type: Literal["text", "short", "checklist", "choice", "date"] = "text"
+    """text (multi-line) | short (one line) | checklist | choice | date"""
     label: str | None = None
+    """Label shown above the input."""
     placeholder: str | None = None
+    """Grey hint text inside the empty field (text/short)."""
     height: PositiveInt | None = None
+    """Minimum height in px (text only)."""
     items: list[NonEmpty] | None = None
+    """Checkbox items (required for checklist)."""
     options: list[NonEmpty] | None = None
+    """Options (required for choice)."""
     multiple: bool = False
+    """choice: allow several options (checkboxes instead of radio buttons)."""
     monospace: bool = False
+    """Fixed-width font for tables, protocols or command output (text/short)."""
 
     @model_validator(mode="after")
     def _type_requirements(self) -> Answer:
@@ -230,7 +260,9 @@ def is_safe_asset_path(src: str) -> bool:
 
 class Trainer(Strict):
     expectations: list[NonEmpty] = []
+    """Markdown bullet list 'Das sollte drinstehen' — only Fachbetreuer see it."""
     notes: str | None = None
+    """Markdown internal notes — never shown to apprentices."""
 
 
 FIXED_CONTENT_FIELDS = ("requirement", "snippet", "steps", "guiding_questions")
@@ -238,19 +270,33 @@ FIXED_CONTENT_FIELDS = ("requirement", "snippet", "steps", "guiding_questions")
 
 class Task(Strict):
     id: Id
+    """Stable id; progress is stored under it. Never change it once apprentices have started."""
     number: str | None = None
+    """Display number; default: <day>.<position within the day>."""
     title: NonEmpty
+    """Task title."""
     level: NonEmpty
+    """Key from 'levels'."""
     duration: Duration | None = None
+    """Expected effort: 30m, 1h, 1h30m. Summed up per day."""
     requirement: str | None = None
+    """Markdown: the actual assignment."""
     snippet: str | None = None
+    """Monospace block, shown verbatim."""
     steps: list[NonEmpty] | None = None
+    """Markdown per item: numbered click path."""
     guiding_questions: list[NonEmpty] | None = None
+    """Markdown per item: guiding questions."""
     blocks: list[Block] | None = None
+    """Free layout instead of requirement/snippet/steps/guiding_questions."""
     hints: str | None = None
+    """Markdown: collapsible 'Hilfestellung'."""
     answers: list[Answer] = []
+    """Input fields; each one is saved per user."""
     bonus: str | None = None
+    """Markdown: collapsible 'Extra' section."""
     trainer: Trainer | None = None
+    """Content visible only to Fachbetreuer."""
 
     @model_validator(mode="after")
     def _blocks_exclusive(self) -> Task:
@@ -273,26 +319,41 @@ class Task(Strict):
 
 class Module(Strict):
     code: NonEmpty
+    """Unique module code, e.g. CRT-01."""
     title: NonEmpty
+    """Module title."""
     objective: str | None = None
+    """Markdown learning objective ('Lernziel')."""
     tasks: list[Task] = []
+    """Tasks of this module."""
 
 
 class Day(Strict):
     id: Id
+    """Anchor for the quick navigation."""
     title: NonEmpty
+    """Day banner title."""
     subtitle: str | None = None
+    """Line below the day title."""
     nav_label: str | None = None
+    """Short label in the quick navigation (default: title)."""
     nav_tag: str | None = None
+    """Badge in the quick navigation (default: running number)."""
     optional: bool = False
+    """Render as optional day."""
     modules: list[Module] = []
+    """Modules of this day."""
 
 
 class Catalog(Strict):
     schema_version: Literal[1]
+    """Version of the file format; always 1."""
     workbook: WorkbookMeta
+    """Workbook metadata."""
     levels: dict[str, Level] = Field(min_length=1)
+    """Difficulty levels; tasks reference them by key."""
     days: list[Day]
+    """Days -> modules -> tasks."""
 
 
 # --------------------------------------------------------------------------- cross checks
@@ -358,3 +419,24 @@ def _dup(loc: tuple[str | int, ...], kind: str, value: str) -> ReferenceIssue:
         message=f"Duplicate {kind} id '{value}'",
         ctx={"kind": kind, "id": value},
     )
+
+
+# --------------------------------------------------------------------------- JSON Schema
+
+
+def catalog_json_schema() -> str:
+    """JSON Schema of the catalog format, for editor autocompletion and checks.
+
+    Covers structure, types, enums and formats. Cross-references (unique ids,
+    level keys, blocks vs. fixed fields) are checked by ``workbook validate``.
+    """
+    import json
+
+    schema = Catalog.model_json_schema()
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Workbook catalog",
+        "description": "Task catalog for the workbook server (see docs/AUTHORING.md).",
+        **schema,
+    }
+    return json.dumps(schema, indent=2, ensure_ascii=False) + "\n"
