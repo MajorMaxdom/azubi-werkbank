@@ -4,7 +4,19 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.6.0] - 2026-10-06
+## [1.7.0] - 2026-10-06
+
+### Added
+- Delete a workbook in the editor ("Löschen …" in the workbook list):
+  confirmation page with the impact (apprentices with answers, assigned
+  users, images) that requires typing the workbook id. The catalog file is
+  moved to `workbooks/_backups/deleted/` (restore by moving it back),
+  references in `users.yaml` are removed (an emptied workbook list stays
+  `[]` = no workbook, comments kept). Answers and images are kept unless the
+  corresponding checkbox is ticked.
+- `/admin/users` shows "keine" for apprentices without any workbook.
+
+ - 2026-10-06
 
 ### Changed
 - The product is called **Azubi-Werkbank**: top bar, page titles

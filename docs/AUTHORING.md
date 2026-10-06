@@ -41,6 +41,11 @@ in the top bar (`/admin/editor`).
   answers are read-only (marked "hat Antworten"). Removing such a task or
   field asks for confirmation; the saved answers stay in the progress files
   ("Verwaiste Antworten").
+- **Deleting** a workbook ("Löschen …" in the workbook list) asks for the
+  workbook id as confirmation. The file is moved to
+  `workbooks/_backups/deleted/` and can be restored by moving it back
+  (assignments to apprentices have to be set again). Saved answers and
+  images are kept unless you tick the boxes to delete them too.
 - If the file was changed elsewhere in the meantime (by hand or by another
   Fachbetreuer), saving is refused instead of overwriting — reload the page.
 
