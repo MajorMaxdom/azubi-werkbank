@@ -3,6 +3,7 @@
 {% block content %}
 <h1 class="page-title">{{ t('admin.users.heading') }}</h1>
 <p class="page-intro">{{ t('admin.users.intro') }}</p>
+<p class="page-actions"><a class="button button-quiet" href="/admin/assign">{{ t('assign.link') }}</a></p>
 
 {% if users_error %}
 <p class="form-error" role="alert">{{ t('admin.users.file_error', message=users_error) }}</p>

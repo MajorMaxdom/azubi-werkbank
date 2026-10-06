@@ -3,6 +3,7 @@
 {% block content %}
 <h1 class="page-title">{{ t('overview.heading') }}</h1>
 <p class="page-intro">{{ t('overview.intro') }}</p>
+{% if sections %}<p class="page-actions"><a class="button button-quiet" href="/admin/overview.csv">{{ t('csv.link_all') }}</a></p>{% endif %}
 <p class="legend">
   <span class="legend-item"><span class="port"></span>{{ t('overview.state_open') }}</span>
   <span class="legend-item"><span class="port is-lit"></span>{{ t('overview.state_done') }}</span>
@@ -12,7 +13,10 @@
 {% for section in sections %}
 {% set wb = section.view %}
 <section class="overview-section" id="{{ wb.meta.id }}">
-  <h2 class="section-title">{{ wb.meta.title }} <span class="mono muted">({{ wb.meta.id }})</span></h2>
+  <div class="section-head">
+    <h2 class="section-title">{{ wb.meta.title }} <span class="mono muted">({{ wb.meta.id }})</span></h2>
+    {% if section.rows %}<a class="button button-quiet" href="/admin/overview.csv?workbook={{ wb.meta.id }}">{{ t('csv.link_workbook') }}</a>{% endif %}
+  </div>
   {% if section.rows %}
   <div class="table-wrap">
     <table class="data-table overview-table">

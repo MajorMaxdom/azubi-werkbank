@@ -101,7 +101,8 @@ def pages(tmp_path):
                      "/admin/users/anna", "/admin/catalogs", "/nope", "/my-tasks",
                      "/my-tasks?filter=open", "/my-tasks?filter=ok", "/my-tasks?filter=redo",
                      "/my-tasks?scope=all", "/admin/editor", "/admin/editor/demo", "/account",
-                     "/admin/users/anna/delete"]:  # fmt: skip
+                     "/admin/users/anna/delete", "/admin/assign",
+                     "/admin/assign?workbook=network-security"]:  # fmt: skip
             result[f"boss {path}"] = boss.get(path).text
         for path in ["/", "/workbooks/demo", "/workbooks/network-security", "/admin/users",
                      "/my-tasks", "/account"]:  # fmt: skip
