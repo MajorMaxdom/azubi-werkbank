@@ -36,6 +36,9 @@
   <fieldset class="field">
     <legend class="section-title">{{ t('assign.apprentices') }}</legend>
     {% if rows %}
+    <label class="option select-all" hidden data-select-all>
+      <input type="checkbox"><span>{{ t('assign.select_all') }}</span>
+    </label>
     <div class="table-wrap">
       <table class="data-table assign-table">
         <thead>
@@ -102,3 +105,4 @@
 </form>
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="/static/js/select-all.js" defer></script>{% endblock %}

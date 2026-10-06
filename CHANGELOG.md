@@ -4,7 +4,40 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.3.0] - 2026-10-06
+## [1.4.0] - 2026-10-06
+
+### Added
+- **Mein Konto** (`/account`): change your own password (current password
+  required; wrong attempts count towards the lockout; other sessions end,
+  the current one stays) and download your own data.
+- **Delete users for good** (GDPR): confirmation page that lists everything
+  that will be removed and requires typing the username; removes the
+  users.yaml entry (comments kept), credentials, all progress files and every
+  Fachbetreuer assignment pointing to the user. Data export as ZIP
+  (`user.json`, raw progress files, HTML export per workbook) for
+  Fachbetreuer (`/admin/users/{username}/data`) and for yourself.
+- **Image upload in the form editor**: upload PNG/JPEG/GIF/WebP (file
+  signature checked, max. 5 MB, safe file names, never overwrites), pick
+  existing images of the workbook, thumbnail preview.
+- **Questions per task** ("Rückfragen"): apprentice and Fachbetreuer
+  exchange messages on a task; open questions show up as "Rückfrage" in
+  "Meine Aufgaben", count as "zu prüfen" and appear in "Nur zu prüfen".
+- **Review history**: earlier reviews are kept and shown (review view,
+  apprentice view, export). Comment-only edits by the same Fachbetreuer
+  within 10 minutes update the current review instead of adding entries.
+- **Bulk Fachbetreuer assignment** (`/admin/assign`): set the Fachbetreuer
+  of a workbook and/or per module for many apprentices in one step, with
+  "Alle Azubis auswählen".
+- **CSV export** of the overview (`/admin/overview.csv`) and of
+  "Meine Aufgaben" (`/my-tasks.csv`, same filters), formatted for German
+  Excel and protected against formula injection.
+
+### Security
+- New credentials start at a random session version, so a cookie of a
+  deleted account can never be accepted for a re-created account with the
+  same username.
+
+ - 2026-10-06
 
 ### Added
 - "Meine Aufgaben" — Fachbetreuer filter, combinable with the status

@@ -558,6 +558,7 @@ user_delete:
   deleted: "{name} ({username}) wurde mit allen Daten gelöscht."
 
 assign:
+  select_all: Alle Azubis auswählen
   link: Fachbetreuer zuordnen
   title: Fachbetreuer zuordnen
   heading: Fachbetreuer zuordnen
