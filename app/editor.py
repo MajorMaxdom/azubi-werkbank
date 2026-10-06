@@ -1,14 +1,22 @@
 """Backend of the form editor: load catalog files as plain data, validate,
 protect ids that already have saved answers, and write YAML back while keeping
-comments and formatting of untouched parts."""
+comments and formatting of untouched parts. Also stores uploaded images for
+image blocks under ``workbooks/assets/<workbook-id>/``."""
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import hashlib
 import io
 import json
+import os
+import posixpath
+import re
 import shutil
+import tempfile
+import unicodedata
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -20,7 +28,7 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 
 from app.files import atomic_write, locked
 from app.loader import CatalogError, to_plain
-from app.models.catalog import Catalog, check_references
+from app.models.catalog import Catalog, ImageBlock, check_references
 from app.models.progress import Progress
 
 BACKUP_DIR = "_backups"
@@ -316,3 +324,125 @@ def new_workbook_data(workbook_id: str, title: str, source: dict | None = None) 
             }
         ],
     }
+
+
+# --------------------------------------------------------------------------- image assets
+
+MAX_ASSET_BYTES = 5 * 1024 * 1024
+ASSET_FILE_MODE = 0o664
+ASSET_DIR_MODE = 0o775
+ASSET_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+_ASSET_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_TRANSLIT = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+
+
+class AssetTooLarge(Exception):
+    """The uploaded image exceeds ``MAX_ASSET_BYTES``."""
+
+
+def detect_image_type(head: bytes) -> str | None:
+    """File extension (without dot) for PNG, JPEG, GIF or WebP data, else None.
+
+    Only the file signature counts; names and declared content types are ignored.
+    """
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if head.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if head.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    if len(head) >= 12 and head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def asset_basename(filename: str | None) -> str:
+    """Safe file stem from an uploaded name: lowercase, ä→ae …, only ``[a-z0-9-]``."""
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+    stem = name.rsplit(".", 1)[0] if "." in name.lstrip(".") else name
+    stem = stem.lower().translate(_TRANSLIT)
+    stem = unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode("ascii")
+    stem = re.sub(r"[^a-z0-9]+", "-", stem).strip("-")[:60].strip("-")
+    return stem or "bild"
+
+
+def asset_directory(workbooks_dir: Path, workbook_id: str) -> Path:
+    return workbooks_dir / "assets" / workbook_id
+
+
+def store_asset(directory: Path, filename: str | None, chunks: Iterable[bytes]) -> str:
+    """Write an uploaded image into ``directory`` and return its new file name.
+
+    The data is streamed into a temp file (at most ``MAX_ASSET_BYTES``), its
+    signature decides the extension, and it is hard-linked under a free name, so
+    an existing file is never overwritten (``-2``, ``-3`` … on collision).
+    Raises ``AssetTooLarge`` or ``ValueError`` (not a PNG/JPEG/GIF/WebP image).
+    """
+    if not directory.is_dir():
+        directory.mkdir(parents=True, exist_ok=True)
+        os.chmod(directory, ASSET_DIR_MODE)
+    fd, tmp = tempfile.mkstemp(prefix=".upload.", suffix=".tmp", dir=directory)
+    try:
+        os.fchmod(fd, ASSET_FILE_MODE)
+        size = 0
+        head = b""
+        with os.fdopen(fd, "wb") as fh:
+            for chunk in chunks:
+                size += len(chunk)
+                if size > MAX_ASSET_BYTES:
+                    raise AssetTooLarge
+                if len(head) < 16:
+                    head += chunk[: 16 - len(head)]
+                fh.write(chunk)
+            fh.flush()
+            os.fsync(fh.fileno())
+        ext = detect_image_type(head)
+        if ext is None:
+            raise ValueError("unsupported image type")
+        base = asset_basename(filename)
+        n = 1
+        while True:
+            name = f"{base}.{ext}" if n == 1 else f"{base}-{n}.{ext}"
+            try:
+                os.link(tmp, directory / name)
+            except FileExistsError:
+                n += 1
+                continue
+            return name
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(tmp)
+
+
+def list_assets(directory: Path) -> list[dict[str, Any]]:
+    """Images in ``directory`` as ``{name, size}`` (sorted by name)."""
+    if not directory.is_dir():
+        return []
+    out = []
+    for path in sorted(directory.iterdir()):
+        if (
+            path.name.startswith(".")
+            or path.suffix.lower() not in ASSET_EXTENSIONS
+            or path.is_symlink()
+            or not path.is_file()
+        ):
+            continue
+        out.append({"name": path.name, "size": path.stat().st_size})
+    return out
+
+
+def is_asset_name(name: str) -> bool:
+    return bool(_ASSET_NAME_RE.fullmatch(name)) and ".." not in name
+
+
+def referenced_assets(catalogs: Iterable[Catalog]) -> set[str]:
+    """Normalized ``src`` of every image block in ``catalogs``."""
+    found = set()
+    for catalog in catalogs:
+        for day in catalog.days:
+            for module in day.modules:
+                for task in module.tasks:
+                    for block in task.blocks or []:
+                        if isinstance(block, ImageBlock):
+                            found.add(posixpath.normpath(block.src))
+    return found
