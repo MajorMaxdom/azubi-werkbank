@@ -18,6 +18,11 @@ sign off the workbook. No database, no Docker, no frontend build step.
 - Self-contained HTML export of a workbook with answers (offline, printable).
 - Per-workbook colour themes; light, print-friendly design.
 
+## Installation
+
+On a Debian/Ubuntu server: clone to `/opt/werkbank` and run
+`sudo ./deploy/install.sh` — details in [`deploy/README.md`](deploy/README.md).
+
 ## Development
 
 ```sh

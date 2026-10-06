@@ -14,6 +14,38 @@ terminates TLS in front of it and obtains the certificate automatically.
 | `/var/lib/werkbank/progress/` | answers per user and workbook | `werkbank 0700/0600` |
 | `/var/lib/werkbank/workbooks/` | catalogs + `assets/` | `werkbank:werkbank 2775` |
 
+## Quick install with the script
+
+After step 1 (DNS and ports), everything else can be done by
+`deploy/install.sh`:
+
+```sh
+sudo git clone https://github.com/<account>/azubi-werkbank.git /opt/werkbank
+cd /opt/werkbank
+sudo ./deploy/install.sh
+```
+
+It asks for the data directory (default `/var/lib/werkbank`), the domain and
+the first Fachbetreuer, then installs packages, the system user, the venv,
+the config, the systemd service, the `werkbank` command and — if a domain is
+given — Caddy, and prints the invite link of the first Fachbetreuer.
+Non-interactive:
+
+```sh
+sudo ./deploy/install.sh --yes --data-dir /var/lib/werkbank \
+  --domain werkbank.firma.de --admin mmustermann --admin-name "Max Mustermann"
+```
+
+Options: `--tls-internal` (Caddy's own CA, for intranet/VPN-only setups),
+`--no-caddy`, `--port`, `--timezone`; `--help` lists all. Running it again is
+safe: existing config, data and users are kept. Code and data must not live
+below `/home`, `/root` or `/tmp` (the service is sandboxed). An existing Caddy
+setup stays intact: the site goes to `/etc/caddy/werkbank.caddy` and the main
+`Caddyfile` only gets an `import` line (backed up first, restored if the
+combined config does not validate).
+
+The following sections describe the same steps by hand.
+
 ## 1. DNS and ports
 
 1. Create an `A` record (and `AAAA` if the server has IPv6) for your domain
@@ -124,9 +156,13 @@ Logs: `journalctl -u werkbank -f`.
 
 ## 7. Caddy
 
+The site gets its own file, so other sites on the same Caddy stay untouched:
+
 ```sh
-sudo cp /opt/werkbank/deploy/Caddyfile /etc/caddy/Caddyfile
-sudoedit /etc/caddy/Caddyfile        # replace werkbank.example.de with your domain
+sudo cp /opt/werkbank/deploy/Caddyfile /etc/caddy/werkbank.caddy
+sudoedit /etc/caddy/werkbank.caddy   # replace werkbank.example.de with your domain
+sudo cp /etc/caddy/Caddyfile /etc/caddy/Caddyfile.bak
+echo 'import /etc/caddy/werkbank.caddy' | sudo tee -a /etc/caddy/Caddyfile
 sudo install -d -o caddy -g caddy /var/log/caddy
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy

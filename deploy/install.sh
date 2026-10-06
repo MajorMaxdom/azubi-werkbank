@@ -105,8 +105,11 @@ check_location() {  # check_location LABEL PATH
     [[ "$path" == /* ]] || die "$label must be an absolute path: $path"
     case "$path" in
         /home|/home/*|/root|/root/*|/tmp|/tmp/*|/var/tmp|/var/tmp/*|/run/*)
+            local hint="Use e.g. /var/lib/werkbank or /srv/werkbank."
+            [[ "$label" == "The code directory" ]] \
+                && hint="Clone the repository to /opt/werkbank, e.g.: sudo git clone <url> /opt/werkbank"
             die "$label must not be below /home, /root or /tmp (the service cannot read it there): $path
-     Clone the repository to /opt/werkbank, e.g.: sudo git clone <url> /opt/werkbank" ;;
+     $hint" ;;
     esac
 }
 

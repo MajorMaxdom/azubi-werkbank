@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-10-06
+
+### Added
+- `deploy/install.sh`: one-step installation from a clone — asks for (or
+  takes as options) data directory, domain and first Fachbetreuer; installs
+  packages, system user, venv, config, systemd service, a `werkbank` command
+  (`/usr/local/bin/werkbank`, runs as the service user) and optionally Caddy;
+  prints the invite link. Safe to run again (keeps config, data and users).
+  Refuses code/data below `/home`, `/root` or `/tmp`.
+
+### Changed
+- Caddy is integrated without replacing an existing configuration: the site
+  lives in `/etc/caddy/werkbank.caddy`, the main Caddyfile only gets an
+  `import` line (backed up; restored automatically if validation fails).
+  `deploy/README.md` describes the same for manual installs.
+
 ## [1.7.0] - 2026-10-06
 
 ### Added

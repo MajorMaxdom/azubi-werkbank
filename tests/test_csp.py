@@ -176,3 +176,23 @@ def test_config_example_matches_config_model():
     assert config.listen_host == "127.0.0.1"
     assert config.secure_cookies is True
     assert set(data) == set(Config.model_fields)
+
+
+def test_install_script_syntax_and_caddy_site(tmp_path):
+    """deploy/install.sh parses and generates the Caddy site from deploy/Caddyfile."""
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    script = ROOT / "deploy" / "install.sh"
+    subprocess.run([bash, "-n", str(script)], check=True)
+    out = subprocess.run(
+        [bash, "-c", f'source "{script}"; caddyfile_content werkbank.firma.de 8123 1'],
+        check=True, capture_output=True, text=True,
+    ).stdout  # fmt: skip
+    assert "werkbank.firma.de {\n\ttls internal" in out
+    assert "reverse_proxy 127.0.0.1:8123" in out
+    assert "Content-Security-Policy" in out
+    assert "example.de" not in out
