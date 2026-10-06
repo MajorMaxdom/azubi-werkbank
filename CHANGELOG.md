@@ -4,7 +4,28 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.4.0] - 2026-10-06
+
+### Added
+- Progress store `progress/<workbook>/<user>.json` (atomic writes under a
+  per-file lock, mode 0600 / dirs 0700, ids validated before use in paths;
+  unreadable files are never overwritten and show a German error page).
+- JSON API `PATCH /api/progress/{workbook}/header` and
+  `PATCH /api/progress/{workbook}/tasks/{task}` (`{answers?, done?}`): only
+  for the apprentice's own progress; Fachbetreuer get 403. Unknown task or
+  answer ids and values that do not fit the answer type are 422; answers are
+  limited to 20 000 characters, requests to 1 MB (413).
+- Autosave (vanilla JS): 800 ms debounce, status "Gespeichert" / "Speichert …"
+  / "Offline – Änderungen werden erneut gesendet", retry with backoff, warning
+  on leaving with unsaved changes, flush when the tab is hidden.
+- Saved state is rendered on reload; live progress bar and port LEDs; own
+  progress on the start page; hint "Diese Aufgabe wurde geändert, nachdem du
+  sie bearbeitet hast." when the task content hash changed.
+- Answers of removed tasks stay in the file and are not rendered or counted.
+- Hints and bonus sections are expanded when printing.
+- Fachbetreuer see the workbook as a read-only preview.
+
+## [0.3.1] - 2026-10-06
 
 ### Added
 - `/admin/users/{username}`: edit an apprentice in the browser — name,

@@ -24,7 +24,19 @@ module:
   objective: Lernziel
   ports_label: "{done} von {total} Aufgaben erledigt"
 
+autosave:
+  saving: Speichert …
+  saved: Gespeichert
+  offline: Offline – Änderungen werden erneut gesendet
+  error: Speichern fehlgeschlagen – bitte die Seite neu laden
+  logged_out: Abgemeldet – bitte neu anmelden, ungespeicherte Änderungen gehen sonst verloren
+  unsaved: Es gibt noch nicht gespeicherte Änderungen.
+
+workbook:
+  preview_trainer: "Vorschau: Als Fachbetreuer kannst du in diesem Heft keine Antworten speichern."
+
 task:
+  changed: Diese Aufgabe wurde geändert, nachdem du sie bearbeitet hast.
   requirement: Anforderung
   duration: "ca. {minutes} Min."
   hints: Hilfestellung anzeigen
@@ -70,6 +82,7 @@ index:
     other: "{count} Aufgaben"
   version: "Version {version}"
   open: Öffnen
+  progress: "{done} von {total} erledigt"
 
 admin:
   users:
@@ -158,6 +171,7 @@ errors:
   page_forbidden: Dafür fehlt dir die Berechtigung.
   page_not_found: Diese Seite gibt es nicht.
   page_generic: Da ist etwas schiefgegangen.
+  progress_corrupt: Dein Speicherstand für dieses Heft kann nicht gelesen werden. Es wurde nichts überschrieben. Bitte sag deinem Fachbetreuer Bescheid.
   csrf: Die Sitzung ist abgelaufen oder die Anfrage kam von einer fremden Seite. Bitte lade die Seite neu und versuche es noch einmal.
   generic: "Ungültiger Wert ({message})"
   missing: Pflichtfeld fehlt.

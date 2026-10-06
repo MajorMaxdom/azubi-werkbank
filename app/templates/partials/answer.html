@@ -1,12 +1,13 @@
 {% set fid = "a-" ~ task.id ~ "-" ~ answer.id %}
-<div class="answer answer-{{ answer.type }}" data-answer="{{ answer.id }}">
+{% set value = pv.answer(task.id, answer.id) %}
+<div class="answer answer-{{ answer.type }}" data-answer="{{ answer.id }}" data-type="{{ answer.type }}"{% if answer.multiple %} data-multiple{% endif %}>
   {% if answer.type in ('checklist', 'choice') %}
   <fieldset>
     {% if answer.label %}<legend class="micro-label">{{ answer.label }}</legend>{% endif %}
     {% set multi = answer.type == 'checklist' or answer.multiple %}
     {% for option in (answer.items if answer.type == 'checklist' else answer.options) %}
     <label class="option">
-      <input type="{{ 'checkbox' if multi else 'radio' }}" name="{{ fid }}" value="{{ option }}">
+      <input type="{{ 'checkbox' if multi else 'radio' }}" name="{{ fid }}" value="{{ option }}"{% if (multi and value and option in value) or (not multi and value == option) %} checked{% endif %}{% if locked %} disabled{% endif %}>
       <span>{{ option }}</span>
     </label>
     {% endfor %}
@@ -14,9 +15,9 @@
   {% else %}
   {% if answer.label %}<label class="micro-label" for="{{ fid }}">{{ answer.label }}</label>{% endif %}
   {% if answer.type == 'text' %}
-  <textarea id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}></textarea>
+  <textarea id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>{{ value or '' }}</textarea>
   {% else %}
-  <input id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} type="{{ 'date' if answer.type == 'date' else 'text' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}>
+  <input id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} type="{{ 'date' if answer.type == 'date' else 'text' }}" value="{{ value or '' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}{% if locked %} disabled{% endif %}>
   {% endif %}
   {% endif %}
 </div>

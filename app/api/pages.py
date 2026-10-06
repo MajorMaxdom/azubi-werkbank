@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 from app.api.common import render
 from app.auth import Identity, get_current_user
 from app.models.catalog import ID_PATTERN, is_safe_asset_path
+from app.renderer import build_progress_view
 
 router = APIRouter()
 
@@ -37,13 +38,26 @@ def get_view(request: Request, workbook_id: str, identity: Identity):
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, identity: CurrentUser) -> HTMLResponse:
     registry = request.app.state.registry
-    views = [registry.view(wid) for wid in registry.catalogs() if identity.user.may_open(wid)]
-    return render(request, "index.html", workbooks=[v for v in views if v is not None])
+    store = request.app.state.progress
+    entries = []
+    for wid in registry.catalogs():
+        view = registry.view(wid) if identity.user.may_open(wid) else None
+        if view is None:
+            continue
+        pv = None
+        if identity.user.role == "apprentice":
+            pv = build_progress_view(view, store.load(wid, identity.username), editable=True)
+        entries.append((view, pv))
+    return render(request, "index.html", entries=entries)
 
 
 @router.get("/workbooks/{workbook_id}", response_class=HTMLResponse)
 def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLResponse:
     view = get_view(request, workbook_id, identity)
+    apprentice = identity.user.role == "apprentice"
+    progress = (
+        request.app.state.progress.load(workbook_id, identity.username) if apprentice else None
+    )
     return render(
         request,
         "workbook.html",
@@ -51,6 +65,7 @@ def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLR
         is_trainer=identity.is_trainer,
         static=False,
         asset_url=asset_url,
+        pv=build_progress_view(view, progress, editable=apprentice),
     )
 
 

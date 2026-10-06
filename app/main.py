@@ -15,7 +15,7 @@ from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import admin, auth, events, pages
+from app.api import admin, auth, events, pages, progress
 from app.api.common import render, wants_html
 from app.auth import (
     AccountService,
@@ -33,6 +33,7 @@ from app.auth import (
 from app.config import Config, load_config
 from app.i18n import Translator
 from app.loader import Registry
+from app.progress import CorruptProgress, ProgressStore
 from app.renderer import STATIC_DIR, create_environment
 
 log = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ def create_app(config: Config | None = None, *, watch: bool = True) -> FastAPI:
     app.state.accounts = accounts
     app.state.sessions = sessions
     app.state.login = LoginService(config, accounts, IpRateLimiter())
+    app.state.progress = ProgressStore(config.paths.progress)
 
     app.add_middleware(AuthMiddleware)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -96,6 +98,7 @@ def create_app(config: Config | None = None, *, watch: bool = True) -> FastAPI:
     app.include_router(pages.router)
     app.include_router(admin.router)
     app.include_router(events.router)
+    app.include_router(progress.router)
     _install_error_handlers(app)
     return app
 
@@ -120,6 +123,14 @@ def _install_error_handlers(app: FastAPI) -> None:
         if wants_html(request):
             return render(request, "message.html", status_code=403, message="errors.csrf")
         return Response(status_code=403)
+
+    @app.exception_handler(CorruptProgress)
+    async def corrupt_progress(request: Request, exc: CorruptProgress) -> Response:
+        if wants_html(request):
+            return render(
+                request, "message.html", status_code=500, message="errors.progress_corrupt"
+            )
+        return Response(status_code=500)
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException) -> Response:

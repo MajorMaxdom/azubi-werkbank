@@ -2,9 +2,9 @@
 {% block title %}{{ t('index.title') }}{% endblock %}
 {% block content %}
 <h1 class="page-title">{{ t('index.heading') }}</h1>
-{% if workbooks %}
+{% if entries %}
 <ul class="card-list">
-  {% for wb in workbooks %}
+  {% for wb, pv in entries %}
   <li class="card">
     <div class="card-meta">
       {% if wb.meta.brand %}<span class="micro-label">{{ wb.meta.brand }}</span>{% endif %}
@@ -13,6 +13,12 @@
     <h2 class="card-title"><a href="/workbooks/{{ wb.meta.id }}">{{ wb.meta.title }}</a></h2>
     {% if wb.meta.subtitle %}<p class="card-sub">{{ wb.meta.subtitle }}</p>{% endif %}
     {% if wb.meta.description %}<p class="card-desc">{{ wb.meta.description }}</p>{% endif %}
+    {% if pv %}
+    <div class="card-progress">
+      <progress class="progress-bar progress-bar-light" max="{{ pv.total }}" value="{{ pv.done }}" aria-label="{{ t('topbar.progress_label') }}"></progress>
+      <span class="micro-label">{{ t('index.progress', done=pv.done, total=pv.total) }}</span>
+    </div>
+    {% endif %}
   </li>
   {% endfor %}
 </ul>

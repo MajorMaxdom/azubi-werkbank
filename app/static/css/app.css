@@ -90,6 +90,23 @@ kbd { font-family: var(--font-mono); }
   font-variant-numeric: tabular-nums;
 }
 
+.save-status {
+  min-width: 7em;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.save-status.is-saved { opacity: 0.8; }
+.save-status.is-offline,
+.save-status.is-error,
+.save-status.is-logged-out {
+  padding: 1px 8px;
+  white-space: normal;
+  color: var(--ink);
+  background: var(--trainer-bg);
+  border-radius: 2px;
+}
+
 .quicknav {
   display: flex;
   justify-content: center;
@@ -523,6 +540,28 @@ input[type="checkbox"]:focus-visible {
   text-align: center;
 }
 
+/* ---------------------------------------------------------------- progress notes */
+
+.preview-note,
+.changed-note {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--trainer-bg);
+  border-left: 3px solid var(--level-ochre);
+  border-radius: var(--radius);
+}
+.changed-note { margin: -4px 0 12px; }
+input:disabled,
+textarea:disabled { color: var(--ink); background: var(--paper); cursor: not-allowed; }
+
+.card-progress { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.progress-bar-light { flex: 0 1 220px; height: 6px; background: var(--paper); border: 1px solid var(--line); }
+.progress-bar-light::-webkit-progress-bar { background: var(--paper); }
+.progress-bar-light::-webkit-progress-value { background: var(--ok); }
+.progress-bar-light::-moz-progress-bar { background: var(--ok); }
+
 /* ---------------------------------------------------------------- update banner */
 
 [hidden] { display: none !important; }
@@ -778,7 +817,9 @@ details.overrides .table-wrap { margin: 0; padding: 0 12px 12px; }
   textarea { resize: none; }
   /* The trainer area is only printed in a trainer export. */
   .trainer,
-  .signoff { display: none; }
+  .signoff,
+  .save-status,
+  .preview-note { display: none; }
   .is-trainer-export .trainer,
   .is-trainer-export .signoff { display: block; }
 }

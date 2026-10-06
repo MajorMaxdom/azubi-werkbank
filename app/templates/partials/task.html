@@ -1,12 +1,13 @@
 {% set task = tv.task %}
 {% set level = wb.catalog.levels.get(task.level) %}
-<article class="task" id="task-{{ task.id }}" data-task="{{ task.id }}" data-hash="{{ tv.hash }}">
+<article class="task" id="task-{{ task.id }}" data-task="{{ task.id }}">
   <div class="task-head">
     <span class="task-number">{{ tv.number }}</span>
     <h4 class="task-title">{{ task.title }}</h4>
     {% if level %}<span class="level level-{{ level.color }}"{% if level.description %} title="{{ level.description }}"{% endif %}>{{ level.label }}</span>{% endif %}
     {% if tv.minutes %}<span class="duration">{{ t('task.duration', minutes=tv.minutes) }}</span>{% endif %}
   </div>
+  {% if pv.changed(task.id) %}<p class="changed-note" data-changed-note>{{ t('task.changed') }}</p>{% endif %}
 
   {% if task.blocks is not none %}
   {% for block in task.blocks %}
@@ -37,7 +38,7 @@
   {% endfor %}
 
   <div class="done-row">
-    <input type="checkbox" id="done-{{ task.id }}" data-done>
+    <input type="checkbox" id="done-{{ task.id }}" data-done{% if pv.is_done(task.id) %} checked{% endif %}{% if locked %} disabled{% endif %}>
     <label for="done-{{ task.id }}">{{ t('task.mark_done') }}</label>
   </div>
 

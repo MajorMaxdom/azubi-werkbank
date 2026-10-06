@@ -19,6 +19,7 @@ from markupsafe import Markup
 
 from app.i18n import ROOT, Translator, get_translator
 from app.models.catalog import DURATION_PATTERN, Catalog, Day, Module, Task
+from app.models.progress import Progress, TaskProgress
 from app.theme import theme_css, theme_hash
 
 APP_DIR = Path(__file__).resolve().parent
@@ -270,4 +271,63 @@ def render_static(
         inline_css=Markup(inline_base_css()),
         inline_theme=Markup(view.theme_css),
         asset_url=static_asset_url(workbooks_dir or ROOT / "workbooks"),
+        pv=build_progress_view(view, None, editable=False),
+    )
+
+
+# --------------------------------------------------------------------------- progress state
+
+
+@dataclass
+class ProgressView:
+    """A user's saved state as seen by the templates (empty when there is none)."""
+
+    progress: Progress | None = None
+    editable: bool = False
+    total: int = 0
+    task_hashes: dict[str, str] = field(default_factory=dict)
+
+    def task(self, task_id: str) -> TaskProgress | None:
+        return self.progress.tasks.get(task_id) if self.progress else None
+
+    def answer(self, task_id: str, answer_id: str):
+        tp = self.task(task_id)
+        return tp.answers.get(answer_id) if tp else None
+
+    def header(self, field_id: str) -> str:
+        return self.progress.header.get(field_id, "") if self.progress else ""
+
+    def is_done(self, task_id: str) -> bool:
+        tp = self.task(task_id)
+        return bool(tp and tp.done)
+
+    def review_status(self, task_id: str) -> str | None:
+        tp = self.task(task_id)
+        return tp.review.status if tp and tp.review else None
+
+    def changed(self, task_id: str) -> bool:
+        """The task changed in the catalog after the user last worked on it."""
+        tp = self.task(task_id)
+        current = self.task_hashes.get(task_id)
+        return bool(tp and tp.task_hash and current and tp.task_hash != current)
+
+    @property
+    def done(self) -> int:
+        if not self.progress:
+            return 0
+        return self.progress.done_count(set(self.task_hashes))
+
+    @property
+    def percent(self) -> int:
+        return round(self.done * 100 / self.total) if self.total else 0
+
+
+def build_progress_view(
+    view: WorkbookView, progress: Progress | None, *, editable: bool
+) -> ProgressView:
+    return ProgressView(
+        progress=progress,
+        editable=editable,
+        total=view.task_count,
+        task_hashes={tid: tv.hash for tid, tv in view.tasks_by_id.items()},
     )
