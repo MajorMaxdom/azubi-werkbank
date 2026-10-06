@@ -885,6 +885,37 @@ details.overrides .table-wrap { margin: 0; padding: 0 12px 12px; }
 .signoff-comment { white-space: pre-wrap; margin-bottom: 10px; }
 .signoff-meta { margin: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--ok); }
 
+/* ---------------------------------------------------------------- my tasks */
+
+.filter-tabs { display: flex; gap: 4px; margin: 0 0 24px; border-bottom: 1px solid var(--line); }
+.filter-tabs a {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+.filter-tabs a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.filter-tabs a:hover { color: var(--accent); }
+.task-group { margin-bottom: 32px; }
+.task-group .section-title { margin-bottom: 10px; }
+.task-group .section-title a { text-decoration: none; }
+.my-tasks-table td:first-child { width: 4em; }
+.row-comment { margin: 4px 0 0; font-size: 13px; color: var(--muted); white-space: pre-wrap; }
+.state {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.state-open { color: var(--muted); }
+.state-waiting,
+.state-recheck { color: color-mix(in srgb, var(--level-ochre) 85%, var(--ink)); border-color: color-mix(in srgb, var(--level-ochre) 40%, white); }
+.state-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, white); }
+.state-redo { color: var(--redo); border-color: color-mix(in srgb, var(--redo) 40%, white); }
+
 /* ---------------------------------------------------------------- overview */
 
 .muted { color: var(--muted); font-weight: 400; }

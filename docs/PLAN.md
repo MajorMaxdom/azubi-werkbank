@@ -200,6 +200,8 @@ Pages (German UI, English URLs):
 - `GET /` — workbook list with own progress (trainers: all workbooks, plus
   "Meine Azubis": apprentice workbooks they are Fachbetreuer for, with
   progress and open checks)
+- `GET /my-tasks` — all tasks of the current user with status and Fachbetreuer
+  (Fachbetreuer: the tasks they are responsible for; `?filter=open`)
 - `GET /workbooks/{workbook_id}` — workbook for the current user
 - `GET /workbooks/{workbook_id}/theme.css` — generated color overrides (section 6a)
 - `GET /workbooks/{workbook_id}/users/{username}` — trainer: view one user's

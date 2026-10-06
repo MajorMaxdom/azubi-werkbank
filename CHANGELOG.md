@@ -4,7 +4,17 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] - 2026-10-06
+## [1.1.0] - 2026-10-06
+
+### Added
+- "Meine Aufgaben" (`/my-tasks`, link in the top bar) for every logged-in
+  user. Apprentices see every task of their workbooks with status (offen,
+  erledigt – wartet auf Prüfung, geändert – erneut prüfen, geprüft – OK,
+  Nacharbeiten), done date, review comment and responsible Fachbetreuer.
+  Fachbetreuer see every task they are responsible for across all
+  apprentices; filter "Nur zu prüfen".
+
+ - 2026-10-06
 
 ### Added
 - Export `GET /workbooks/{workbook}/export` (button "Export / Drucken"): a

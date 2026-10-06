@@ -184,3 +184,22 @@ def orphaned_answers(catalog: Catalog, progress: Progress) -> list[tuple[str, st
             if answer_id not in known:
                 orphans.append((task_id, answer_id, value))
     return orphans
+
+
+TASK_STATES = ("open", "waiting", "recheck", "ok", "redo")
+
+
+def task_state(tp) -> str:
+    """open | waiting (done, not reviewed) | recheck (changed after review) | ok | redo."""
+    if tp is None:
+        return "open"
+    review = tp.review
+    if review is not None and review.status == "redo":
+        return "redo"
+    if not tp.done:
+        return "open"
+    if review is None or review.status is None:
+        return "waiting"
+    if needs_check(tp):
+        return "recheck"
+    return "ok"

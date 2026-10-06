@@ -98,9 +98,11 @@ def pages(tmp_path):
         result["invite"] = anna.get(link.removeprefix(BASE_URL)).text
         for path in ["/", "/workbooks/demo", "/workbooks/themed", "/workbooks/network-security",
                      "/workbooks/demo/users/anna", "/admin/overview", "/admin/users",
-                     "/admin/users/anna", "/admin/catalogs", "/nope"]:  # fmt: skip
+                     "/admin/users/anna", "/admin/catalogs", "/nope", "/my-tasks",
+                     "/my-tasks?filter=open"]:  # fmt: skip
             result[f"boss {path}"] = boss.get(path).text
-        for path in ["/", "/workbooks/demo", "/workbooks/network-security", "/admin/users"]:
+        for path in ["/", "/workbooks/demo", "/workbooks/network-security", "/admin/users",
+                     "/my-tasks"]:  # fmt: skip
             result[f"anna {path}"] = anna.get(path).text
     return result
 

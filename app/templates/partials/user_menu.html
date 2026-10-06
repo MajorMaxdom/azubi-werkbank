@@ -1,5 +1,6 @@
 {% if identity %}
 <nav class="user-menu" aria-label="{{ t('nav.user') }}">
+  <a href="/my-tasks">{{ t('nav.my_tasks') }}</a>
   {% if identity.is_trainer %}
   <a href="/admin/overview">{{ t('nav.overview') }}</a>
   <a href="/admin/users">{{ t('nav.users') }}</a>

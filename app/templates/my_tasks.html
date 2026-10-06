@@ -1,0 +1,48 @@
+{% extends "page.html" %}
+{% block title %}{{ t('my_tasks.title') }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('my_tasks.title') }}</h1>
+<p class="page-intro">{{ t('my_tasks.intro_trainer') if identity.is_trainer else t('my_tasks.intro_apprentice') }}</p>
+<nav class="filter-tabs" aria-label="{{ t('my_tasks.filter') }}">
+  <a href="/my-tasks"{% if not only_open %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_all') }}</a>
+  <a href="/my-tasks?filter=open"{% if only_open %} aria-current="page"{% endif %}>{{ t('my_tasks.filter_open_trainer') if identity.is_trainer else t('my_tasks.filter_open') }}</a>
+</nav>
+{% for g in groups %}
+<section class="task-group">
+  <h2 class="section-title"><a href="{{ g.link }}">{{ g.title }}</a> <span class="mono muted">{{ t('index.progress', done=g.done, total=g.total) }}</span></h2>
+  {% if g.rows %}
+  <div class="table-wrap">
+    <table class="data-table my-tasks-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ t('my_tasks.number') }}</th>
+          <th scope="col">{{ t('my_tasks.task') }}</th>
+          <th scope="col">{{ t('my_tasks.status') }}</th>
+          <th scope="col">{{ t('my_tasks.done_at') }}</th>
+          <th scope="col">{{ t('my_tasks.supervisor') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in g.rows %}
+        <tr>
+          <td class="mono">{{ r.number }}</td>
+          <td>
+            <a href="{{ r.link }}">{{ r.title }}</a> <span class="mono muted">{{ r.module }}</span>
+            {% if r.comment %}<p class="row-comment">{{ r.comment }}</p>{% endif %}
+          </td>
+          <td><span class="state state-{{ r.state }}">{{ r.state_label }}</span></td>
+          <td class="mono">{{ r.done_at | de_date }}</td>
+          <td>{{ r.supervisor or t('my_tasks.no_supervisor') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">{{ t('my_tasks.nothing_open') }}</p>
+  {% endif %}
+</section>
+{% else %}
+<p class="empty">{{ t('mine.empty') if identity.is_trainer else t('index.empty') }}</p>
+{% endfor %}
+{% endblock %}

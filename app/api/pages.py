@@ -15,7 +15,13 @@ from app.api.common import render
 from app.auth import Forbidden, Identity, get_current_user
 from app.models.catalog import ID_PATTERN, is_safe_asset_path
 from app.models.users import User
-from app.progress import needs_check, orphaned_answers, responsible_tasks
+from app.progress import (
+    TASK_STATES,
+    needs_check,
+    orphaned_answers,
+    responsible_tasks,
+    task_state,
+)
 from app.renderer import (
     ExportInfo,
     ProgressView,
@@ -244,3 +250,109 @@ def export(request: Request, workbook_id: str, identity: CurrentUser, user: str 
             "Cache-Control": "no-store",
         },
     )
+
+
+# --------------------------------------------------------------------------- my tasks
+
+
+@dataclass
+class TaskRow:
+    number: str
+    title: str
+    task_id: str
+    module: str
+    state: str
+    state_label: str
+    done_at: object
+    supervisor: str
+    comment: str
+    link: str
+
+
+@dataclass
+class TaskGroup:
+    title: str  # workbook title (apprentice) or "<apprentice> · <workbook>" (trainer)
+    link: str
+    rows: list[TaskRow]
+    done: int
+    total: int
+
+
+STATE_KEYS = {state: f"my_tasks.state_{state}" for state in TASK_STATES}
+
+
+def _rows(request, view, progress, user, username_for_link, task_ids=None) -> list[TaskRow]:
+    t = request.app.state.translator
+    names = {n: u.name for n, u in request.app.state.users.all().items()}
+    rows = []
+    wid = view.meta.id
+    for day in view.days:
+        for module in day.modules:
+            for tv in module.tasks:
+                if task_ids is not None and tv.task.id not in task_ids:
+                    continue
+                tp = progress.tasks.get(tv.task.id)
+                state = task_state(tp)
+                sup = user.supervisor_for(wid, tv.task.id)
+                base = (
+                    f"/workbooks/{wid}/users/{username_for_link}"
+                    if username_for_link
+                    else f"/workbooks/{wid}"
+                )
+                rows.append(
+                    TaskRow(
+                        number=tv.number,
+                        title=tv.task.title,
+                        task_id=tv.task.id,
+                        module=module.module.code,
+                        state=state,
+                        state_label=t(STATE_KEYS[state]),
+                        done_at=tp.done_at if tp and tp.done else None,
+                        supervisor=names.get(sup, sup) if sup else "",
+                        comment=tp.review.comment if tp and tp.review else "",
+                        link=f"{base}#task-{tv.task.id}",
+                    )
+                )
+    return rows
+
+
+@router.get("/my-tasks", response_class=HTMLResponse)
+def my_tasks(request: Request, identity: CurrentUser, filter: str = "all") -> HTMLResponse:
+    registry = request.app.state.registry
+    store = request.app.state.progress
+    only_open = filter == "open"
+    groups: list[TaskGroup] = []
+    if identity.user.role == "apprentice":
+        for wid in registry.catalogs():
+            view = registry.view(wid) if identity.user.may_open(wid) else None
+            if view is None:
+                continue
+            progress = store.load(wid, identity.username)
+            rows = _rows(request, view, progress, identity.user, None)
+            if only_open:
+                rows = [r for r in rows if r.state in ("open", "redo")]
+            groups.append(
+                TaskGroup(
+                    title=view.meta.title,
+                    link=f"/workbooks/{wid}",
+                    rows=rows,
+                    done=progress.done_count(set(view.tasks_by_id)),
+                    total=view.task_count,
+                )
+            )
+    else:
+        for a in assignments_for(request, identity.username):
+            progress = store.load(a.view.meta.id, a.username)
+            rows = _rows(request, a.view, progress, a.user, a.username, set(a.tasks))
+            if only_open:
+                rows = [r for r in rows if r.state in ("waiting", "recheck")]
+            groups.append(
+                TaskGroup(
+                    title=f"{a.user.name} · {a.view.meta.title}",
+                    link=f"/workbooks/{a.view.meta.id}/users/{a.username}",
+                    rows=rows,
+                    done=a.pv.done,
+                    total=a.pv.total,
+                )
+            )
+    return render(request, "my_tasks.html", groups=groups, only_open=only_open)

@@ -11,6 +11,7 @@ nav:
   users: Nutzer
   catalogs: Kataloge
   overview: Übersicht
+  my_tasks: Meine Aufgaben
   home: Zur Startseite
 
 day:
@@ -85,6 +86,27 @@ overview:
   state_redo: Nacharbeiten
   done_at: "(erledigt am {date})"
   no_apprentices: Diesem Heft sind keine aktiven Azubis zugeordnet.
+
+my_tasks:
+  title: Meine Aufgaben
+  intro_apprentice: Alle Aufgaben aus deinen Arbeitsheften mit Stand, Bewertung und zuständigem Fachbetreuer.
+  intro_trainer: Alle Aufgaben, für die du als Fachbetreuer zuständig bist – über alle Azubis und Hefte.
+  filter: Filter
+  filter_all: Alle
+  filter_open: Offen und Nacharbeiten
+  filter_open_trainer: Nur zu prüfen
+  number: Nr.
+  task: Aufgabe
+  status: Status
+  done_at: Erledigt am
+  supervisor: Fachbetreuer
+  no_supervisor: —
+  nothing_open: Hier ist gerade nichts offen.
+  state_open: offen
+  state_waiting: erledigt – wartet auf Prüfung
+  state_recheck: geändert – erneut prüfen
+  state_ok: geprüft – OK
+  state_redo: Nacharbeiten
 
 mine:
   heading: Meine Azubis
