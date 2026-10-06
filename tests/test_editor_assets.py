@@ -175,7 +175,7 @@ def test_apprentice_forbidden(config):
     with open_client(config, "anna") as anna:
         assert upload(anna, "a.png", PNG).status_code == 403
         assert anna.get(URL, headers=READ).status_code == 403
-        assert anna.delete(f"{URL}/a.png", headers=WRITE).status_code == 403
+        assert anna.post(f"{URL}/a.png/delete", headers=WRITE).status_code == 403
     assert not (config.paths.workbooks / "assets").exists()
 
 
@@ -226,7 +226,7 @@ def test_uploaded_image_served_and_usable_in_catalog(config):
         task = loaded["data"]["days"][0]["modules"][0]["tasks"][1]
         task["blocks"] = [{"type": "image", "src": src, "alt": "Netzplan", "caption": "Abb. 1"}]
         body = {"data": loaded["data"], "base_hash": loaded["base_hash"], "confirm_delete": {}}
-        saved = boss.put("/api/editor/demo", json=body, headers=WRITE)
+        saved = boss.post("/api/editor/demo", json=body, headers=WRITE)
         assert saved.status_code == 200, saved.text
         page = boss.get("/workbooks/demo").text
         assert f'src="/{src}"' in page
@@ -248,13 +248,13 @@ def test_delete_unused_asset_only(config):
         task = loaded["data"]["days"][0]["modules"][0]["tasks"][1]
         task["blocks"] = [{"type": "image", "src": used, "alt": "Bild"}]
         body = {"data": loaded["data"], "base_hash": loaded["base_hash"], "confirm_delete": {}}
-        assert boss.put("/api/editor/demo", json=body, headers=WRITE).status_code == 200
+        assert boss.post("/api/editor/demo", json=body, headers=WRITE).status_code == 200
 
-        assert boss.delete(f"{URL}/used.png", headers=WRITE).status_code == 409
-        assert boss.delete(f"{URL}/unused.png", headers=READ).status_code == 403
-        assert boss.delete(f"{URL}/unused.png", headers=WRITE).status_code == 200
-        assert boss.delete(f"{URL}/unused.png", headers=WRITE).status_code == 404
-        assert boss.delete(f"{URL}/..%2F..%2Fdemo.yaml", headers=WRITE).status_code == 404
+        assert boss.post(f"{URL}/used.png/delete", headers=WRITE).status_code == 409
+        assert boss.post(f"{URL}/unused.png/delete", headers=READ).status_code == 403
+        assert boss.post(f"{URL}/unused.png/delete", headers=WRITE).status_code == 200
+        assert boss.post(f"{URL}/unused.png/delete", headers=WRITE).status_code == 404
+        assert boss.post(f"{URL}/..%2F..%2Fdemo.yaml/delete", headers=WRITE).status_code == 404
         names = [a["name"] for a in boss.get(URL, headers=READ).json()]
     assert names == ["used.png"]
     assert (config.paths.workbooks / "demo.yaml").exists()
@@ -311,3 +311,64 @@ def test_store_asset_stops_streaming_when_too_large(tmp_path):
         store_asset(tmp_path / "assets" / "demo", "x.png", chunks())
     assert len(consumed) <= 6
     assert list((tmp_path / "assets" / "demo").iterdir()) == []
+
+
+# ------------------------------------------------------------------ housekeeping page
+
+
+def _use_image_in_block(config, src: str) -> None:
+    path = config.paths.workbooks / "demo.yaml"
+    text = path.read_text(encoding="utf-8").replace(
+        "            requirement: Tu etwas.\n",
+        "            blocks:\n              - {type: image, src: " + src + ", alt: Bild}\n",
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def test_housekeeping_page_lists_usage_and_deletes_unused(config):
+    from tests.conftest import ORIGIN, csrf_from
+
+    with open_client(config, "boss") as boss:
+        upload(boss, "used.png", PNG)
+        upload(boss, "unused.png", PNG)
+        upload(boss, "in-text.png", PNG)
+        _use_image_in_block(config, "assets/demo/used.png")
+        path = config.paths.workbooks / "demo.yaml"
+        marker = "          - id: t2\n            title: Aufgabe zwei\n"
+        hint = '            hints: "Siehe ![Bild](assets/demo/in-text.png)"\n'
+        path.write_text(path.read_text().replace(marker, marker + hint), encoding="utf-8")
+        boss.app.state.registry.apply_changes({path})
+
+        page = boss.get("/admin/editor/demo/assets").text
+        assert "3 Bilder, davon 1 ungenutzt" in page
+        assert "Demo · 1.1 Aufgabe eins" in page  # image block
+        assert "Demo · 1.2 Aufgabe zwei" in page  # mentioned in Markdown text
+        assert page.count('/assets/unused.png/delete"') == 1
+        assert '/assets/used.png/delete"' not in page
+
+        token = csrf_from(page)
+        # The used image cannot be deleted, even by a crafted request.
+        r = boss.post("/admin/editor/demo/assets/used.png/delete", data={"csrf_token": token},
+                      headers=ORIGIN, follow_redirects=False)  # fmt: skip
+        assert r.headers["location"].endswith("done=in_use")
+        assert (asset_dir(config) / "used.png").exists()
+        # Cleanup removes only unused images.
+        r = boss.post("/admin/editor/demo/assets/cleanup", data={"csrf_token": token},
+                      headers=ORIGIN, follow_redirects=False)  # fmt: skip
+        assert r.status_code == 303
+        names = sorted(p.name for p in asset_dir(config).iterdir())
+        assert names == ["in-text.png", "used.png"]
+        assert "Alle ungenutzten Bilder wurden gelöscht." in boss.get(r.headers["location"]).text
+        # Without CSRF token or Origin nothing happens.
+        upload(boss, "late.png", PNG)
+        assert boss.post("/admin/editor/demo/assets/cleanup", headers=ORIGIN).status_code == 403
+        assert (asset_dir(config) / "late.png").exists()
+
+
+def test_housekeeping_page_empty_and_permissions(config):
+    with open_client(config, "boss") as boss:
+        assert "noch keine Bilder" in boss.get("/admin/editor/demo/assets").text
+        assert boss.get("/admin/editor/ghost/assets").status_code == 404
+        assert 'href="/admin/editor/demo/assets"' in boss.get("/admin/editor/demo").text
+    with open_client(config, "anna") as anna:
+        assert anna.get("/admin/editor/demo/assets").status_code == 403

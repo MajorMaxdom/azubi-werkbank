@@ -4,7 +4,23 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.4.0] - 2026-10-06
+## [1.5.0] - 2026-10-06
+
+### Added
+- Image housekeeping per workbook (`/admin/editor/{workbook}/assets`, link
+  "Bilder verwalten" in the editor): every image with thumbnail, size and
+  where it is used (image blocks and any mention in task text); delete
+  single unused images or all unused images at once. Images in use cannot be
+  deleted.
+
+### Changed
+- The editor saves via `POST /api/editor/{workbook}` and deletes images via
+  `POST …/assets/{name}/delete` — state-changing requests are POST/PATCH only,
+  as required by the security rules (previously PUT/DELETE).
+- `preview` and `strings` are reserved and cannot be used as workbook ids.
+- `CLAUDE.md`: both roles may append messages to a task's question thread.
+
+ - 2026-10-06
 
 ### Added
 - **Mein Konto** (`/account`): change your own password (current password

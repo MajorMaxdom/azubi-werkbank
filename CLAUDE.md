@@ -78,7 +78,9 @@ tests/
 - The current user is resolved in exactly one place (auth middleware/dependency).
   Never take the acting username from the URL, query or request body.
 - Apprentices may only read/write their own progress. Trainers may read all
-  progress but only write `review` and `signoff` data.
+  progress but only write `review` and `signoff` data. Both roles may append
+  messages to a task's question thread (`comments`); author and role always
+  come from the session.
 - `trainer` content of catalogs (expectations, notes) is never sent to apprentices,
   not even hidden in HTML.
 - Usernames and IDs are validated with `^[a-z0-9][a-z0-9-]{0,62}$` before being

@@ -21,6 +21,7 @@ from app.editor import (
     AssetTooLarge,
     EditorConflict,
     asset_directory,
+    asset_usage,
     clean,
     is_asset_name,
     list_assets,
@@ -28,7 +29,6 @@ from app.editor import (
     locked_ids,
     missing_locked,
     new_workbook_data,
-    referenced_assets,
     save,
     store_asset,
     validate,
@@ -43,6 +43,8 @@ router = APIRouter(dependencies=[Depends(require_trainer)])
 Trainer = Annotated[Identity, Depends(require_trainer)]
 
 _ID_RE = re.compile(ID_PATTERN)
+# Path segments of the editor API that must never be workbook ids.
+RESERVED_IDS = {"preview", "strings"}
 NEW_FILE_HEADER = "# Workbook catalog — edited with the form editor; see docs/AUTHORING.md.\n"
 
 
@@ -103,7 +105,7 @@ def create_workbook(
 
     if not title:
         return fail("editor.error_title")
-    if not _ID_RE.fullmatch(workbook_id):
+    if not _ID_RE.fullmatch(workbook_id) or workbook_id in RESERVED_IDS:
         return fail("editor.error_id")
     path = registry.directory / f"{workbook_id}.yaml"
     if registry.get(workbook_id) is not None or path.exists():
@@ -154,46 +156,6 @@ def load(request: Request, workbook_id: str) -> dict[str, Any]:
         "file": entry.path.name,
         "locked": {tid: sorted(aids) for tid, aids in locked_map.items()},
     }
-
-
-class SaveRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    data: dict[str, Any]
-    base_hash: str
-    confirm_delete: dict[str, list[str]] = {}
-
-
-@api.put("/{workbook_id}")
-async def store(request: Request, workbook_id: str):
-    entry = _entry(request, workbook_id)
-    try:
-        body = SaveRequest.model_validate(await read_json(request))
-    except ValidationError:
-        return JSONResponse({"error": "invalid request"}, status_code=422)
-    data = clean(body.data)
-    catalog, errors = validate(data, entry.path.name)
-    if catalog is not None and catalog.workbook.id != workbook_id:
-        errors = [CatalogError(entry.path.name, ("workbook", "id"), "id_changed", "id changed")]
-        catalog = None
-    if catalog is None:
-        return JSONResponse({"errors": _errors(request, errors)}, status_code=422)
-
-    locked_map = locked_ids(request.app.state.config.paths.progress, workbook_id)
-    missing = missing_locked(catalog, locked_map)
-    unconfirmed = {
-        tid: aids
-        for tid, aids in missing.items()
-        if tid not in body.confirm_delete or set(aids) - set(body.confirm_delete[tid])
-    }
-    if unconfirmed:
-        return JSONResponse({"confirm": unconfirmed}, status_code=409)
-    try:
-        new_hash = save(entry.path, data, body.base_hash)
-    except EditorConflict:
-        return JSONResponse({"conflict": True}, status_code=409)
-    request.app.state.registry.apply_changes({entry.path})
-    return {"base_hash": new_hash, "version": catalog.workbook.version}
 
 
 class PreviewRequest(BaseModel):
@@ -251,6 +213,46 @@ async def preview(request: Request):
         asset_url=lambda src: "/" + src,
     )
     return {"html": html}
+
+
+class SaveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data: dict[str, Any]
+    base_hash: str
+    confirm_delete: dict[str, list[str]] = {}
+
+
+@api.post("/{workbook_id}")
+async def store(request: Request, workbook_id: str):
+    entry = _entry(request, workbook_id)
+    try:
+        body = SaveRequest.model_validate(await read_json(request))
+    except ValidationError:
+        return JSONResponse({"error": "invalid request"}, status_code=422)
+    data = clean(body.data)
+    catalog, errors = validate(data, entry.path.name)
+    if catalog is not None and catalog.workbook.id != workbook_id:
+        errors = [CatalogError(entry.path.name, ("workbook", "id"), "id_changed", "id changed")]
+        catalog = None
+    if catalog is None:
+        return JSONResponse({"errors": _errors(request, errors)}, status_code=422)
+
+    locked_map = locked_ids(request.app.state.config.paths.progress, workbook_id)
+    missing = missing_locked(catalog, locked_map)
+    unconfirmed = {
+        tid: aids
+        for tid, aids in missing.items()
+        if tid not in body.confirm_delete or set(aids) - set(body.confirm_delete[tid])
+    }
+    if unconfirmed:
+        return JSONResponse({"confirm": unconfirmed}, status_code=409)
+    try:
+        new_hash = save(entry.path, data, body.base_hash)
+    except EditorConflict:
+        return JSONResponse({"conflict": True}, status_code=409)
+    request.app.state.registry.apply_changes({entry.path})
+    return {"base_hash": new_hash, "version": catalog.workbook.version}
 
 
 # --------------------------------------------------------------------------- image assets
@@ -319,16 +321,74 @@ async def upload_asset(request: Request, workbook_id: str):
     return {"src": _asset_src(workbook_id, name), "name": name}
 
 
-@api.delete("/{workbook_id}/assets/{name}")
-def delete_asset(request: Request, workbook_id: str, name: str):
-    """Remove an image that no image block (of any loaded workbook) uses."""
-    _entry(request, workbook_id)
+def _delete_unused_asset(request: Request, workbook_id: str, name: str) -> str | None:
+    """Delete one image if nothing uses it. Returns its src, or None if it is in use."""
     directory = asset_directory(request.app.state.config.paths.workbooks, workbook_id)
     if not is_asset_name(name) or name not in {a["name"] for a in list_assets(directory)}:
         raise HTTPException(status_code=404)
     src = _asset_src(workbook_id, name)
-    if src in referenced_assets(request.app.state.registry.catalogs().values()):
-        return JSONResponse({"error": "in_use"}, status_code=409)
+    if src in _asset_usage(request):
+        return None
     (directory / name).unlink(missing_ok=True)
     log.info("editor.asset_deleted workbook=%s name=%s", workbook_id, name)
+    return src
+
+
+def _asset_usage(request: Request) -> dict[str, list[str]]:
+    registry = request.app.state.registry
+    views = [registry.view(wid) for wid in registry.catalogs()]
+    return asset_usage(v for v in views if v is not None)
+
+
+@api.post("/{workbook_id}/assets/{name}/delete")
+def delete_asset(request: Request, workbook_id: str, name: str):
+    """Remove an image that nothing in any loaded workbook uses."""
+    _entry(request, workbook_id)
+    src = _delete_unused_asset(request, workbook_id, name)
+    if src is None:
+        return JSONResponse({"error": "in_use"}, status_code=409)
     return {"deleted": src}
+
+
+# --------------------------------------------------------------------------- image housekeeping
+
+
+@router.get("/admin/editor/{workbook_id}/assets", response_class=HTMLResponse)
+def assets_page(request: Request, workbook_id: str, done: str = "") -> HTMLResponse:
+    entry = _entry(request, workbook_id)
+    directory = asset_directory(request.app.state.config.paths.workbooks, workbook_id)
+    usage = _asset_usage(request)
+    images = []
+    for asset in list_assets(directory):
+        src = _asset_src(workbook_id, asset["name"])
+        images.append({**asset, "src": src, "used_in": usage.get(src, [])})
+    unused = [i for i in images if not i["used_in"]]
+    return render(
+        request,
+        "editor_assets.html",
+        workbook_id=workbook_id,
+        entry=entry,
+        images=images,
+        unused=unused,
+        unused_bytes=sum(i["size"] for i in unused),
+        done=done if done in ("deleted", "cleaned", "in_use") else "",
+    )
+
+
+@router.post(
+    "/admin/editor/{workbook_id}/assets/{name}/delete", dependencies=[Depends(verify_form)]
+)
+def delete_asset_form(request: Request, workbook_id: str, name: str) -> RedirectResponse:
+    _entry(request, workbook_id)
+    src = _delete_unused_asset(request, workbook_id, name)
+    result = "deleted" if src else "in_use"
+    return RedirectResponse(f"/admin/editor/{workbook_id}/assets?done={result}", status_code=303)
+
+
+@router.post("/admin/editor/{workbook_id}/assets/cleanup", dependencies=[Depends(verify_form)])
+def cleanup_assets(request: Request, workbook_id: str) -> RedirectResponse:
+    _entry(request, workbook_id)
+    directory = asset_directory(request.app.state.config.paths.workbooks, workbook_id)
+    for asset in list_assets(directory):
+        _delete_unused_asset(request, workbook_id, asset["name"])
+    return RedirectResponse(f"/admin/editor/{workbook_id}/assets?done=cleaned", status_code=303)

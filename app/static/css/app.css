@@ -1170,6 +1170,13 @@ details.thread:not(.has-comments) > summary { color: var(--muted); }
 .assign-table .option { margin: 0; }
 .assign-table td { vertical-align: middle; }
 
+/* ---------------------------------------------------------------- image housekeeping */
+
+.assets-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 8px; }
+.asset-thumb { display: block; max-width: 140px; max-height: 90px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.asset-usage { margin: 0; padding-left: 18px; font-size: 13.5px; }
+.assets-table td { vertical-align: middle; }
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 600px) {

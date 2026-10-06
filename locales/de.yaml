@@ -621,3 +621,24 @@ review_history:
   summary: "Bewertungsverlauf ({count})"
   by: "{name} am {date}"
   no_status: ohne Status
+
+assets_page:
+  link: Bilder verwalten
+  title: "Bilder: {title}"
+  back: Zurück zum Heft
+  intro: "Alle Bilder im Ordner {folder}. Bilder, die keine Aufgabe mehr verwendet, können hier gelöscht werden."
+  summary: "{count} Bilder, davon {unused} ungenutzt ({size} KB)"
+  cleanup:
+    one: "{count} ungenutztes Bild löschen"
+    other: "Alle {count} ungenutzten Bilder löschen"
+  unsaved_hint: Bilder, die nur in noch nicht gespeicherten Änderungen im Editor verwendet werden, gelten hier als ungenutzt – erst im Editor speichern.
+  image: Bild
+  file: Datei
+  used_in: Verwendet in
+  unused: ungenutzt
+  size: "{kb} KB"
+  delete: Löschen
+  deleted: Das Bild wurde gelöscht.
+  cleaned: Alle ungenutzten Bilder wurden gelöscht.
+  in_use: Das Bild wird inzwischen verwendet und wurde nicht gelöscht.
+  empty: Zu diesem Heft gibt es noch keine Bilder. Hochladen geht im Editor im Bild-Block.

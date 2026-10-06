@@ -1,0 +1,60 @@
+{% extends "page.html" %}
+{% block title %}{{ t('assets_page.title', title=entry.catalog.workbook.title) }}{% endblock %}
+{% block content %}
+<p><a href="/admin/editor/{{ workbook_id }}">{{ t('assets_page.back') }}</a> · <a href="/admin/editor">{{ t('editor.back') }}</a></p>
+<h1 class="page-title">{{ t('assets_page.title', title=entry.catalog.workbook.title) }}</h1>
+<p class="page-intro">{{ t('assets_page.intro', folder='workbooks/assets/' ~ workbook_id) }}</p>
+{% if done == 'deleted' %}<p class="form-success" role="status">{{ t('assets_page.deleted') }}</p>
+{% elif done == 'cleaned' %}<p class="form-success" role="status">{{ t('assets_page.cleaned') }}</p>
+{% elif done == 'in_use' %}<p class="form-error" role="alert">{{ t('assets_page.in_use') }}</p>{% endif %}
+
+{% if images %}
+<div class="assets-summary">
+  <span class="micro-label">{{ t('assets_page.summary', count=images | length, unused=unused | length, size=(unused_bytes / 1024) | round(0) | int) }}</span>
+  {% if unused %}
+  <form method="post" action="/admin/editor/{{ workbook_id }}/assets/cleanup" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button button-danger">{{ t('assets_page.cleanup', count=unused | length) }}</button>
+  </form>
+  {% endif %}
+</div>
+<p class="field-hint">{{ t('assets_page.unsaved_hint') }}</p>
+<div class="table-wrap">
+  <table class="data-table assets-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ t('assets_page.image') }}</th>
+        <th scope="col">{{ t('assets_page.file') }}</th>
+        <th scope="col">{{ t('assets_page.used_in') }}</th>
+        <th scope="col">{{ t('admin.users.actions') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for img in images %}
+      <tr>
+        <td><a href="/{{ img.src }}"><img class="asset-thumb" src="/{{ img.src }}" alt="{{ img.name }}" loading="lazy"></a></td>
+        <td><span class="mono">{{ img.name }}</span><br><span class="muted">{{ t('assets_page.size', kb=((img.size / 1024) | round(1))) }}</span></td>
+        <td>
+          {% if img.used_in %}
+          <ul class="asset-usage">{% for place in img.used_in %}<li>{{ place }}</li>{% endfor %}</ul>
+          {% else %}
+          <span class="state state-open">{{ t('assets_page.unused') }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not img.used_in %}
+          <form method="post" action="/admin/editor/{{ workbook_id }}/assets/{{ img.name }}/delete" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button button-quiet">{{ t('assets_page.delete') }}<span class="visually-hidden"> {{ img.name }}</span></button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">{{ t('assets_page.empty') }}</p>
+{% endif %}
+{% endblock %}

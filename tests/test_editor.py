@@ -35,7 +35,7 @@ def load(client) -> dict:
 
 def put(client, data, base_hash, confirm=None):
     body = {"data": data, "base_hash": base_hash, "confirm_delete": confirm or {}}
-    return client.put("/api/editor/demo", json=body, headers=WRITE)
+    return client.post("/api/editor/demo", json=body, headers=WRITE)
 
 
 # ------------------------------------------------------------------ load & save
@@ -209,6 +209,7 @@ def test_create_copy(config):
         ({"title": "", "id": "x"}, "Bitte einen Titel angeben."),
         ({"title": "X", "id": "Ungültig!"}, "Ungültige Heft-ID"),
         ({"title": "X", "id": "demo"}, "schon vergeben"),
+        ({"title": "X", "id": "preview"}, "Ungültige Heft-ID"),
         ({"title": "X", "id": "neu", "source": "ghost"}, "Vorlage"),
     ],
 )
@@ -248,7 +249,7 @@ def test_apprentices_cannot_use_the_editor(config):
         assert anna.get("/admin/editor").status_code == 403
         assert anna.get("/admin/editor/demo").status_code == 403
         assert anna.get("/api/editor/demo", headers=READ).status_code == 403
-        assert anna.put("/api/editor/demo", json={}, headers=WRITE).status_code == 403
+        assert anna.post("/api/editor/demo", json={}, headers=WRITE).status_code == 403
         assert anna.post("/api/editor/preview", json={}, headers=WRITE).status_code == 403
 
 
@@ -257,7 +258,9 @@ def test_editor_api_csrf(config):
         assert boss.get("/api/editor/demo").status_code == 403  # no X-Workbook
         loaded = load(boss)
         body = {"data": loaded["data"], "base_hash": loaded["base_hash"]}
-        assert boss.put("/api/editor/demo", json=body, headers=READ).status_code == 403  # no Origin
+        assert (
+            boss.post("/api/editor/demo", json=body, headers=READ).status_code == 403
+        )  # no Origin
         assert boss.get("/api/editor/ghost", headers=READ).status_code == 404
         assert boss.get("/admin/editor/..", headers=READ).status_code == 404
 

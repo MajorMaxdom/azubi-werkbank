@@ -1,0 +1,35 @@
+# Workbook catalog — edited with the form editor; see docs/AUTHORING.md.
+schema_version: 1
+workbook:
+  id: test
+  version: 1.0.0
+  title: test
+levels:
+  understand:
+    label: Verstehen
+    color: blue
+    description: Lesen, recherchieren und in eigenen Worten erklären.
+  observe:
+    label: Beobachten
+    color: ochre
+    description: Mit vorgegebenem Klickpfad am System nachschauen, nichts ändern.
+  apply:
+    label: Anwenden
+    color: green
+    description: Eine klar umrissene Sache selbst tun.
+days:
+  - id: day-1
+    title: Tag 1
+    modules:
+      - code: MOD-02
+        title: Erstes Modul
+        tasks:
+          - id: mod01-task-1
+            title: Erste Aufgabe
+            level: understand
+            duration: 30m
+            requirement: Beschreibe hier die Aufgabe.
+            answers:
+              - id: answer
+                label: 'Deine Antwort:'
+    optional: false

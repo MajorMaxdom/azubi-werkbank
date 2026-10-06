@@ -23,6 +23,7 @@
         <td>
           {% if entry.catalog and not entry.conflict %}
           <a class="button button-quiet" href="/admin/editor/{{ entry.catalog.workbook.id }}">{{ t('editor.edit') }}</a>
+          <a class="button button-quiet" href="/admin/editor/{{ entry.catalog.workbook.id }}/assets">{{ t('assets_page.link') }}</a>
           {% if entry.errors %}<span class="field-hint">{{ t('editor.has_errors') }}</span>{% endif %}
           {% else %}
           <span class="field-hint">{{ t('editor.not_editable') }}</span>

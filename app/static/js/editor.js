@@ -863,7 +863,7 @@
     status("saving");
     var messages = document.querySelector("[data-editor-messages]");
     messages.textContent = "";
-    api("PUT", "/api/editor/" + workbookId, {
+    api("POST", "/api/editor/" + workbookId, {
       data: payload(), base_hash: baseHash, confirm_delete: confirmDelete || {}
     }).then(function (res) {
       busy = false;

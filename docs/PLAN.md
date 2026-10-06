@@ -257,7 +257,7 @@ Pages (German UI, English URLs):
   per workbook and per task)
 - `GET /admin/catalogs` — loaded catalogs, versions, validation errors
 - `GET|POST /admin/editor`, `GET /admin/editor/{workbook_id}` — form editor
-  (create blank/copy, edit); JSON API `GET|PUT /api/editor/{workbook_id}`,
+  (create blank/copy, edit); JSON API `GET|POST /api/editor/{workbook_id}`,
   `POST /api/editor/preview`, `GET /api/editor/strings`. Saves validate
   first, back up the old file, keep YAML comments, refuse when the file
   changed meanwhile and require confirmation before removing tasks or answer

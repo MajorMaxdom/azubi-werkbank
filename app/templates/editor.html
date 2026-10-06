@@ -3,7 +3,7 @@
 {% block content %}
 <div class="editor-top">
   <div>
-    <p><a href="/admin/editor">{{ t('editor.back') }}</a> · <a href="/workbooks/{{ workbook_id }}">{{ t('editor.open_workbook') }}</a></p>
+    <p><a href="/admin/editor">{{ t('editor.back') }}</a> · <a href="/workbooks/{{ workbook_id }}">{{ t('editor.open_workbook') }}</a> · <a href="/admin/editor/{{ workbook_id }}/assets">{{ t('assets_page.link') }}</a></p>
     <h1 class="page-title">{{ t('editor.edit_title', title=entry.catalog.workbook.title) }}</h1>
     <p class="page-intro">{{ t('editor.edit_intro', file=entry.path.name) }}</p>
   </div>

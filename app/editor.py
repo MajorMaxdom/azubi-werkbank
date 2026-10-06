@@ -435,14 +435,24 @@ def is_asset_name(name: str) -> bool:
     return bool(_ASSET_NAME_RE.fullmatch(name)) and ".." not in name
 
 
-def referenced_assets(catalogs: Iterable[Catalog]) -> set[str]:
-    """Normalized ``src`` of every image block in ``catalogs``."""
-    found = set()
-    for catalog in catalogs:
-        for day in catalog.days:
-            for module in day.modules:
-                for task in module.tasks:
-                    for block in task.blocks or []:
-                        if isinstance(block, ImageBlock):
-                            found.add(posixpath.normpath(block.src))
-    return found
+def asset_usage(views: Iterable[Any]) -> dict[str, list[str]]:
+    """``src`` -> where it is used ("<workbook title> · <task number> <task title>").
+
+    Image blocks count, and so does any mention of the path in task text (e.g. a
+    Markdown image), so an image is only "unused" if nothing refers to it.
+    """
+    usage: dict[str, list[str]] = {}
+    for view in views:
+        for tv in view.tasks_by_id.values():
+            label = f"{view.meta.title} · {tv.number} {tv.task.title}"
+            paths = {
+                posixpath.normpath(b.src) for b in tv.task.blocks or [] if isinstance(b, ImageBlock)
+            }
+            text = tv.task.model_dump_json()
+            for src in paths:
+                usage.setdefault(src, []).append(label)
+            for match in set(re.findall(r"assets/[A-Za-z0-9._/-]+", text)):
+                src = posixpath.normpath(match)
+                if src not in paths:
+                    usage.setdefault(src, []).append(label)
+    return usage
