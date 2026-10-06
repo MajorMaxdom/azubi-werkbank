@@ -20,3 +20,6 @@ files.zip
 *.html.out
 *.lock
 .claude/
+
+# Editor backups and deleted catalogs (runtime data)
+workbooks/_backups/
