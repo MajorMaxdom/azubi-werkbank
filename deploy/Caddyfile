@@ -1,5 +1,7 @@
-# /etc/caddy/Caddyfile — replace the host name with your domain.
-# Caddy obtains and renews the TLS certificate automatically (ports 80 + 443).
+# Azubi-Werkbank site for Caddy — replace the host name with your domain.
+# Save as /etc/caddy/werkbank.caddy and add "import /etc/caddy/werkbank.caddy"
+# to /etc/caddy/Caddyfile (deploy/install.sh does this), so other sites on the
+# server stay untouched. Caddy obtains the TLS certificate automatically.
 werkbank.example.de {
 	reverse_proxy 127.0.0.1:8000
 	header {
