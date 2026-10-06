@@ -1,0 +1,104 @@
+{% extends "page.html" %}
+{% block title %}{{ t('assign.title') }}{% endblock %}
+{% macro trainer_options(current) %}
+{% for name, trainer in trainers %}
+<option value="{{ name }}"{% if name == current %} selected{% endif %}>{{ trainer.name }} ({{ name }})</option>
+{% endfor %}
+{% endmacro %}
+{% block content %}
+<p><a href="/admin/users">{{ t('admin.users.back') }}</a></p>
+<h1 class="page-title">{{ t('assign.heading') }}</h1>
+<p class="page-intro">{{ t('assign.intro') }}</p>
+{% if saved %}<p class="form-success" role="status">{{ t('assign.saved', count=saved) }}</p>{% endif %}
+{% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+
+{% if views %}
+<form method="get" action="/admin/assign" class="panel assign-pick">
+  <div class="field">
+    <label class="micro-label" for="assign-workbook">{{ t('assign.workbook') }}</label>
+    <select id="assign-workbook" name="workbook">
+      {% for wb in views %}
+      <option value="{{ wb.meta.id }}"{% if view and view.meta.id == wb.meta.id %} selected{% endif %}>{{ wb.meta.title }} ({{ wb.meta.id }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="button button-quiet">{{ t('assign.show') }}</button>
+</form>
+{% else %}
+<p class="empty">{{ t('admin.users.no_catalogs') }}</p>
+{% endif %}
+
+{% if view %}
+<form method="post" action="/admin/assign" class="form-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="workbook" value="{{ view.meta.id }}">
+
+  <fieldset class="field">
+    <legend class="section-title">{{ t('assign.apprentices') }}</legend>
+    {% if rows %}
+    <div class="table-wrap">
+      <table class="data-table assign-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ t('overview.apprentice') }}</th>
+            <th scope="col">{{ t('assign.current') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td><label class="option"><input type="checkbox" name="users" value="{{ row.username }}"{% if row.checked %} checked{% endif %}><span>{{ row.user.name }} <span class="mono muted">{{ row.username }}</span></span></label></td>
+            <td>{{ row.supervisor or t('admin.users.nobody') }}{% if row.overrides %} <span class="muted">{{ t('admin.users.supervisor_tasks', count=row.overrides) }}</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">{{ t('overview.no_apprentices') }}</p>
+    {% endif %}
+  </fieldset>
+
+  {% if rows %}
+  <div class="panel form-stack assign-box">
+    <div class="field">
+      <label class="micro-label" for="assign-default">{{ t('assign.default') }}</label>
+      <select id="assign-default" name="default">
+        <option value="{{ keep }}">{{ t('assign.unchanged') }}</option>
+        <option value="{{ nobody }}"{% if form.default == nobody %} selected{% endif %}>{{ t('assign.nobody') }}</option>
+        {{ trainer_options(form.default) }}
+      </select>
+    </div>
+    {% if modules %}
+    <div class="table-wrap">
+      <table class="data-table override-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ t('assign.module') }}</th>
+            <th scope="col">{{ t('assign.module_supervisor') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in modules %}
+          {% set current = form.modules.get(m.code, keep) %}
+          <tr>
+            <td><label for="assign-module-{{ loop.index }}"><span class="mono">{{ m.code }}</span> · {{ m.title }}</label></td>
+            <td>
+              <select id="assign-module-{{ loop.index }}" name="module:{{ m.code }}">
+                <option value="{{ keep }}">{{ t('assign.unchanged') }}</option>
+                <option value="{{ same_as_workbook }}"{% if current == same_as_workbook %} selected{% endif %}>{{ t('assign.same_as_workbook') }}</option>
+                {{ trainer_options(current) }}
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  <button type="submit" class="button">{{ t('assign.save') }}</button>
+  {% endif %}
+</form>
+{% endif %}
+{% endblock %}

@@ -204,6 +204,8 @@ Pages (German UI, English URLs):
   (Fachbetreuer: the tasks they are responsible for, or with `?scope=all` all
   tasks of all active apprentices; filters `?filter=open|ok|redo` and
   `?sup=<username>|-` for the Fachbetreuer)
+- `GET /my-tasks.csv` — exactly the rows of the current `/my-tasks` view
+  (same `filter`, `sup`, `scope` parameters) as CSV download
 - `GET /workbooks/{workbook_id}` — workbook for the current user
 - `GET /workbooks/{workbook_id}/theme.css` — generated color overrides (section 6a)
 - `GET /workbooks/{workbook_id}/users/{username}` — trainer: view one user's
@@ -212,6 +214,18 @@ Pages (German UI, English URLs):
   user's workbook with answers (trainer: `?user=` allowed), print-friendly
 - `GET /admin/overview` — matrix users × tasks per workbook (port LEDs, done
   dates, review status), links to review view
+- `GET /admin/overview.csv` — all tasks of all active apprentices as CSV
+  (optional `?workbook=<id>`). CSV downloads (also `/my-tasks.csv`) are made for
+  German Excel: UTF-8 with BOM, `;` delimiter, CRLF, dates `dd.mm.yyyy`, German
+  column headers (Azubi, Benutzername, Heft, Modul, Nr., Aufgabe, Status,
+  Erledigt am, Bewertet von, Bewertet am, Kommentar, Fachbetreuer); cells
+  starting with `=`, `+`, `-`, `@`, tab or CR are prefixed with `'` (formula
+  injection). Never contains trainer expectations or notes.
+- `GET|POST /admin/assign` — bulk Fachbetreuer assignment: pick a workbook
+  (`?workbook=<id>`), select apprentices, set the workbook default ("— unverändert —",
+  "niemand", a trainer) and per module a task override for every task of the
+  module ("— unverändert —", "wie Heft" = remove overrides, a trainer). All
+  selected apprentices are updated in one `users.yaml` write (comments kept).
 - `GET /admin/users`, `POST /admin/users` (create → shows invite link with copy
   button), `POST /admin/users/{username}/reset`,
   `POST /admin/users/{username}/deactivate`, `POST /admin/users/{username}/activate`,

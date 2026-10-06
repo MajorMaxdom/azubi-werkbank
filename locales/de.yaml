@@ -496,3 +496,46 @@ editor_ui:
   hint_src: z. B. assets/heft-id/bild.png
   hint_colors: Hex-Farben wie #1B365D. Leer lassen = Standardfarbe.
   id_locked: Gesperrt – zu dieser ID gibt es bereits gespeicherte Antworten.
+
+assign:
+  link: Fachbetreuer zuordnen
+  title: Fachbetreuer zuordnen
+  heading: Fachbetreuer zuordnen
+  intro: Für mehrere Azubis auf einmal festlegen, wer für ein Heft oder einzelne Module zuständig ist. Alles, was auf „— unverändert —“ steht, bleibt wie es ist.
+  workbook: Heft
+  show: Anzeigen
+  apprentices: Azubis
+  current: Fachbetreuer bisher
+  default: Fachbetreuer für das ganze Heft
+  module: Modul
+  module_supervisor: Fachbetreuer für das Modul
+  unchanged: "— unverändert —"
+  nobody: niemand
+  same_as_workbook: wie Heft
+  save: Für ausgewählte Azubis speichern
+  saved:
+    one: "{count} Azubi aktualisiert."
+    other: "{count} Azubis aktualisiert."
+  error_workbook: Dieses Heft gibt es nicht.
+  error_no_users: Bitte mindestens einen Azubi auswählen.
+  error_user: Mindestens ein ausgewählter Azubi existiert nicht oder darf dieses Heft nicht öffnen. Es wurde nichts gespeichert.
+  error_supervisor: Mindestens ein ausgewählter Fachbetreuer ist unbekannt. Es wurde nichts gespeichert.
+  error_nothing: Es ist keine Änderung ausgewählt.
+
+csv:
+  link_all: Alle Hefte als CSV herunterladen
+  link_workbook: Als CSV herunterladen
+  link_my_tasks: CSV
+  link_my_tasks_hint: Lädt die aktuell angezeigten Aufgaben als CSV-Datei für Excel herunter.
+  apprentice: Azubi
+  username: Benutzername
+  workbook: Heft
+  module: Modul
+  number: Nr.
+  task: Aufgabe
+  status: Status
+  done_at: Erledigt am
+  reviewed_by: Bewertet von
+  reviewed_at: Bewertet am
+  comment: Kommentar
+  supervisor: Fachbetreuer

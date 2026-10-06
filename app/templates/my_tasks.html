@@ -17,6 +17,9 @@
   {% for l in sup_links %}<a href="{{ l.url }}"{% if l.current %} aria-current="page"{% endif %}>{{ l.label }}</a>{% endfor %}
 </nav>
 {% endif %}
+{% if groups %}
+<p class="page-actions"><a class="button button-quiet" href="{{ csv_url }}" title="{{ t('csv.link_my_tasks_hint') }}">{{ t('csv.link_my_tasks') }}</a></p>
+{% endif %}
 {% for g in groups %}
 <section class="task-group">
   <h2 class="section-title"><a href="{{ g.link }}">{{ g.title }}</a> <span class="mono muted">{{ t('index.progress', done=g.done, total=g.total) }}</span></h2>

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from app.api.common import render
 from app.auth import Forbidden, Identity, get_current_user
+from app.csv_export import build_csv, csv_response
 from app.models.catalog import ID_PATTERN, is_safe_asset_path
 from app.models.users import User
 from app.progress import (
@@ -29,6 +30,7 @@ from app.renderer import (
     ReviewContext,
     WorkbookView,
     build_progress_view,
+    german_date,
     render_static,
 )
 
@@ -269,6 +271,17 @@ class TaskRow:
     supervisor_id: str  # username, "" when nobody is assigned
     comment: str
     link: str
+    apprentice: str = ""  # display name of the apprentice
+    username: str = ""  # the apprentice
+    workbook: str = ""  # workbook title
+    reviewed_by: str = ""  # display name
+    reviewed_at: object = None
+
+    def csv_values(self) -> list[object]:
+        """One CSV line, in the order of ``app.csv_export.COLUMNS``."""
+        return [self.apprentice, self.username, self.workbook, self.module, self.number,
+                self.title, self.state_label, german_date(self.done_at), self.reviewed_by,
+                german_date(self.reviewed_at), self.comment, self.supervisor]  # fmt: skip
 
 
 @dataclass
@@ -283,11 +296,25 @@ class TaskGroup:
 STATE_KEYS = {state: f"my_tasks.state_{state}" for state in TASK_STATES}
 
 
-def _rows(request, view, progress, user, username_for_link, task_ids=None) -> list[TaskRow]:
+def task_rows(
+    request: Request,
+    view: WorkbookView,
+    progress,
+    username: str,
+    user: User,
+    *,
+    review_link: bool,
+    task_ids: set[str] | None = None,
+) -> list[TaskRow]:
+    """All (or the given) tasks of ``username``'s workbook with status and Fachbetreuer.
+
+    ``review_link``: link to the trainer review view instead of the own workbook.
+    """
     t = request.app.state.translator
     names = {n: u.name for n, u in request.app.state.users.all().items()}
     rows = []
     wid = view.meta.id
+    base = f"/workbooks/{wid}/users/{username}" if review_link else f"/workbooks/{wid}"
     for day in view.days:
         for module in day.modules:
             for tv in module.tasks:
@@ -296,11 +323,8 @@ def _rows(request, view, progress, user, username_for_link, task_ids=None) -> li
                 tp = progress.tasks.get(tv.task.id)
                 state = task_state(tp)
                 sup = user.supervisor_for(wid, tv.task.id)
-                base = (
-                    f"/workbooks/{wid}/users/{username_for_link}"
-                    if username_for_link
-                    else f"/workbooks/{wid}"
-                )
+                review = tp.review if tp else None
+                reviewer = review.reviewed_by if review else None
                 rows.append(
                     TaskRow(
                         number=tv.number,
@@ -312,8 +336,13 @@ def _rows(request, view, progress, user, username_for_link, task_ids=None) -> li
                         done_at=tp.done_at if tp and tp.done else None,
                         supervisor=names.get(sup, sup) if sup else "",
                         supervisor_id=sup or "",
-                        comment=tp.review.comment if tp and tp.review else "",
+                        comment=review.comment if review else "",
                         link=f"{base}#task-{tv.task.id}",
+                        apprentice=user.name,
+                        username=username,
+                        workbook=view.meta.title,
+                        reviewed_by=names.get(reviewer, reviewer) if reviewer else "",
+                        reviewed_at=review.reviewed_at if review else None,
                     )
                 )
     return rows
@@ -334,10 +363,10 @@ class FilterLink:
     current: bool
 
 
-def _url(**params: str) -> str:
+def _url(path: str = "/my-tasks", **params: str) -> str:
     defaults = {"filter": "all", "scope": "mine"}
     query = "&".join(f"{k}={quote(v)}" for k, v in params.items() if v and v != defaults.get(k))
-    return "/my-tasks" + (f"?{query}" if query else "")
+    return path + (f"?{query}" if query else "")
 
 
 def _apprentice_groups(request: Request, identity: Identity) -> list[TaskGroup]:
@@ -353,7 +382,9 @@ def _apprentice_groups(request: Request, identity: Identity) -> list[TaskGroup]:
             TaskGroup(
                 title=view.meta.title,
                 link=f"/workbooks/{wid}",
-                rows=_rows(request, view, progress, identity.user, None),
+                rows=task_rows(
+                    request, view, progress, identity.username, identity.user, review_link=False
+                ),
                 done=progress.done_count(set(view.tasks_by_id)),
                 total=view.task_count,
             )
@@ -368,7 +399,15 @@ def _trainer_groups(request: Request, identity: Identity, everyone: bool) -> lis
     if not everyone:
         for a in assignments_for(request, identity.username):
             progress = store.load(a.view.meta.id, a.username)
-            rows = _rows(request, a.view, progress, a.user, a.username, set(a.tasks))
+            rows = task_rows(
+                request,
+                a.view,
+                progress,
+                a.username,
+                a.user,
+                review_link=True,
+                task_ids=set(a.tasks),
+            )
             groups.append(
                 TaskGroup(
                     title=f"{a.user.name} · {a.view.meta.title}",
@@ -392,7 +431,7 @@ def _trainer_groups(request: Request, identity: Identity, everyone: bool) -> lis
                 TaskGroup(
                     title=f"{user.name} · {view.meta.title}",
                     link=f"/workbooks/{wid}/users/{username}",
-                    rows=_rows(request, view, progress, user, username),
+                    rows=task_rows(request, view, progress, username, user, review_link=True),
                     done=progress.done_count(set(view.tasks_by_id)),
                     total=view.task_count,
                 )
@@ -400,14 +439,21 @@ def _trainer_groups(request: Request, identity: Identity, everyone: bool) -> lis
     return groups
 
 
-@router.get("/my-tasks", response_class=HTMLResponse)
-def my_tasks(
-    request: Request,
-    identity: CurrentUser,
-    filter: str = "all",
-    sup: str = "",
-    scope: str = "mine",
-) -> HTMLResponse:
+@dataclass
+class MyTasks:
+    groups: list[TaskGroup]
+    active: str  # status filter in effect
+    sup: str  # Fachbetreuer filter in effect ("" = all)
+    scope: str  # mine | all
+    everyone: bool
+    filtered: bool
+    sup_links: list[FilterLink]
+
+
+def my_task_groups(
+    request: Request, identity: Identity, filter: str, sup: str, scope: str
+) -> MyTasks:
+    """The groups and rows of "Meine Aufgaben" for the given filters (HTML and CSV)."""
     t = request.app.state.translator
     role = identity.user.role
     states = TASK_FILTERS[role].get(filter)
@@ -451,7 +497,20 @@ def my_tasks(
             g.rows = [r for r in g.rows if r.supervisor_id == wanted]
     if filtered:
         groups = [g for g in groups if g.rows]
+    return MyTasks(groups, active, sup, scope, everyone, filtered, sup_links)
 
+
+@router.get("/my-tasks", response_class=HTMLResponse)
+def my_tasks(
+    request: Request,
+    identity: CurrentUser,
+    filter: str = "all",
+    sup: str = "",
+    scope: str = "mine",
+) -> HTMLResponse:
+    t = request.app.state.translator
+    mt = my_task_groups(request, identity, filter, sup, scope)
+    active, sup, scope, everyone = mt.active, mt.sup, mt.scope, mt.everyone
     open_label = "my_tasks.filter_open_trainer" if identity.is_trainer else "my_tasks.filter_open"
     status_links = [
         FilterLink(t(label), _url(filter=key, sup=sup, scope=scope), active == key)
@@ -467,11 +526,27 @@ def my_tasks(
     return render(
         request,
         "my_tasks.html",
-        groups=groups,
+        groups=mt.groups,
         active=active,
-        filtered=filtered,
+        filtered=mt.filtered,
         everyone=everyone,
         status_links=status_links,
-        sup_links=sup_links,
+        sup_links=mt.sup_links,
         scope_links=scope_links,
+        csv_url=_url("/my-tasks.csv", filter=active, sup=sup, scope=scope),
     )
+
+
+@router.get("/my-tasks.csv")
+def my_tasks_csv(
+    request: Request,
+    identity: CurrentUser,
+    filter: str = "all",
+    sup: str = "",
+    scope: str = "mine",
+) -> Response:
+    """Exactly the rows of the current "Meine Aufgaben" view as CSV download."""
+    mt = my_task_groups(request, identity, filter, sup, scope)
+    rows = [r.csv_values() for g in mt.groups for r in g.rows]
+    content = build_csv(request.app.state.translator, rows)
+    return csv_response(content, f"meine_aufgaben_{datetime.now(UTC):%Y-%m-%d}.csv")

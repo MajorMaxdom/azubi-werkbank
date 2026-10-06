@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.api.common import render
+from app.api.pages import task_rows
 from app.auth import Identity, is_valid_username, require_trainer, suggest_username, verify_form
+from app.csv_export import build_csv, csv_response
 from app.i18n import Translator
 from app.loader import CatalogError, Entry
 from app.models.catalog import ID_PATTERN
@@ -442,3 +445,169 @@ def overview_sections(request: Request) -> list[OverviewSection]:
 @router.get("/overview", response_class=HTMLResponse)
 def overview(request: Request) -> HTMLResponse:
     return render(request, "admin_overview.html", sections=overview_sections(request))
+
+
+def _active_apprentices(request: Request, workbook_id: str) -> list[tuple[str, User]]:
+    """Active apprentices who may open the workbook, sorted by display name."""
+    users = request.app.state.users.all()
+    return sorted(
+        (
+            (name, u)
+            for name, u in users.items()
+            if u.role == "apprentice" and u.active and u.may_open(workbook_id)
+        ),
+        key=lambda item: (item[1].name.lower(), item[0]),
+    )
+
+
+@router.get("/overview.csv")
+def overview_csv(request: Request, workbook: str | None = None) -> Response:
+    """All tasks of all active apprentices (optionally of one workbook) as CSV."""
+    registry = request.app.state.registry
+    if workbook is not None:
+        if not _ID_RE.fullmatch(workbook) or registry.view(workbook) is None:
+            raise HTTPException(status_code=404)
+        workbook_ids = [workbook]
+    else:
+        workbook_ids = list(registry.catalogs())
+    store = request.app.state.progress
+    rows = []
+    for wid in workbook_ids:
+        view = registry.view(wid)
+        if view is None:
+            continue
+        for username, user in _active_apprentices(request, wid):
+            progress = store.load(wid, username)
+            for row in task_rows(request, view, progress, username, user, review_link=True):
+                rows.append(row.csv_values())
+    content = build_csv(request.app.state.translator, rows)
+    filename = f"uebersicht_{workbook or 'alle'}_{datetime.now(UTC):%Y-%m-%d}.csv"
+    return csv_response(content, filename)
+
+
+# --------------------------------------------------------------------------- bulk assignment
+
+KEEP = ""  # select value: leave unchanged
+NOBODY = "-"  # workbook select: no Fachbetreuer
+SAME_AS_WORKBOOK = "="  # module select: remove the task overrides of the module
+
+
+@dataclass
+class AssignRow:
+    username: str
+    user: User
+    supervisor: str  # display name of the workbook default, "" = nobody
+    overrides: int
+    checked: bool
+
+
+def assign_page(
+    request: Request,
+    workbook_id: str | None,
+    status_code: int = 200,
+    *,
+    error: str | None = None,
+    saved: int | None = None,
+    form: dict | None = None,
+) -> HTMLResponse:
+    registry = request.app.state.registry
+    views = [v for v in (registry.view(wid) for wid in registry.catalogs()) if v is not None]
+    view = registry.view(workbook_id) if workbook_id else None
+    form = form or {"users": [], "default": KEEP, "modules": {}}
+    names = {n: u.name for n, u in request.app.state.users.all().items()}
+    rows = []
+    modules = []
+    if view is not None:
+        for username, user in _active_apprentices(request, workbook_id):
+            supervision = user.supervisors.get(workbook_id)
+            default = supervision.default if supervision else None
+            rows.append(
+                AssignRow(
+                    username=username,
+                    user=user,
+                    supervisor=names.get(default, default) if default else "",
+                    overrides=len(supervision.tasks) if supervision else 0,
+                    checked=username in form["users"],
+                )
+            )
+        modules = [m.module for day in view.days for m in day.modules]
+    return render(
+        request,
+        "admin_assign.html",
+        status_code=status_code,
+        views=views,
+        view=view,
+        rows=rows,
+        modules=modules,
+        trainers=_trainers(request),
+        form=form,
+        error=error,
+        saved=saved,
+        keep=KEEP,
+        nobody=NOBODY,
+        same_as_workbook=SAME_AS_WORKBOOK,
+    )
+
+
+@router.get("/assign", response_class=HTMLResponse)
+def assign(request: Request, workbook: str | None = None) -> HTMLResponse:
+    registry = request.app.state.registry
+    if workbook is None:
+        return assign_page(request, next(iter(registry.catalogs()), None))
+    if not _ID_RE.fullmatch(workbook) or registry.view(workbook) is None:
+        return assign_page(request, None, status_code=404, error="assign.error_workbook")
+    return assign_page(request, workbook)
+
+
+@router.post("/assign", dependencies=[Depends(verify_form)], response_class=HTMLResponse)
+async def save_assign(request: Request) -> HTMLResponse:
+    form = await request.form()
+    registry = request.app.state.registry
+    workbook_id = str(form.get("workbook", ""))
+    view = registry.view(workbook_id) if _ID_RE.fullmatch(workbook_id) else None
+    if view is None:
+        return assign_page(request, None, status_code=400, error="assign.error_workbook")
+
+    usernames = list(dict.fromkeys(str(u) for u in form.getlist("users")))
+    default = str(form.get("default", KEEP) or KEEP)
+    module_values: dict[str, str] = {}
+    for day in view.days:
+        for m in day.modules:
+            module_values[m.module.code] = str(form.get(f"module:{m.module.code}", KEEP) or KEEP)
+    state = {"users": usernames, "default": default, "modules": module_values}
+
+    def fail(key: str) -> HTMLResponse:
+        return assign_page(request, workbook_id, status_code=400, error=key, form=state)
+
+    users = request.app.state.users.all()
+    trainers = {name for name, _ in _trainers(request)}
+    if not usernames:
+        return fail("assign.error_no_users")
+    for username in usernames:
+        user = users.get(username) if is_valid_username(username) else None
+        if user is None or user.role != "apprentice" or not user.may_open(workbook_id):
+            return fail("assign.error_user")
+    if default not in (KEEP, NOBODY) and default not in trainers:
+        return fail("assign.error_supervisor")
+    for value in module_values.values():
+        if value not in (KEEP, SAME_AS_WORKBOOK) and value not in trainers:
+            return fail("assign.error_supervisor")
+
+    tasks: dict[str, str | None] = {}
+    for day in view.days:
+        for m in day.modules:
+            value = module_values[m.module.code]
+            if value == KEEP:
+                continue
+            for tv in m.tasks:
+                tasks[tv.task.id] = None if value == SAME_AS_WORKBOOK else value
+    if default == KEEP and not tasks:
+        return fail("assign.error_nothing")
+
+    directory = request.app.state.users
+    if default == KEEP:
+        directory.assign_supervisors(workbook_id, usernames, tasks=tasks)
+    else:
+        new_default = None if default == NOBODY else default
+        directory.assign_supervisors(workbook_id, usernames, default=new_default, tasks=tasks)
+    return assign_page(request, workbook_id, saved=len(usernames))

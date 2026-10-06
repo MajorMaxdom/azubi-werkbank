@@ -1034,6 +1034,17 @@ input[readonly] { color: var(--muted); background: var(--paper); }
 .port-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .port.is-ok { border-color: var(--ink); }
 
+/* ---------------------------------------------------------------- bulk assignment, csv links */
+
+.page-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 24px; }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.overview-section .section-head .section-title { margin-bottom: 0; }
+.assign-pick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 24px; }
+.assign-pick .field { flex: 0 1 420px; }
+.assign-pick select { width: 100%; }
+.assign-table .option { margin: 0; }
+.assign-table td { vertical-align: middle; }
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 600px) {

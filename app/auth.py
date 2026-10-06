@@ -55,6 +55,7 @@ MAX_PASSWORD_LENGTH = 1024
 SESSION_REFRESH_SECONDS = 5 * 60
 IP_MAX_FAILURES = 20
 IP_WINDOW_SECONDS = 15 * 60
+UNCHANGED: Any = object()  # sentinel for UserDirectory.assign_supervisors
 
 
 def is_valid_username(value: str | None) -> bool:
@@ -178,6 +179,70 @@ class UserDirectory:
                 entry["supervisors"] = current
             else:
                 entry.pop("supervisors", None)
+
+        self._modify(change)
+
+    def assign_supervisors(
+        self,
+        workbook_id: str,
+        usernames: Iterable[str],
+        *,
+        default: str | None = UNCHANGED,
+        tasks: dict[str, str | None] | None = None,
+    ) -> None:
+        """Change the Fachbetreuer of one workbook for several users in ONE write.
+
+        ``default``: a trainer, ``None`` (nobody) or ``UNCHANGED``.
+        ``tasks``: task id -> trainer (set an override) or ``None`` (remove the
+        override, i.e. "same as workbook"). Overrides equal to the resulting
+        workbook default are dropped. Other workbooks and comments are kept.
+        """
+        names = list(usernames)
+        task_changes = tasks or {}
+
+        def change(users: CommentedMap) -> None:
+            for username in names:
+                if username not in users:
+                    raise KeyError(username)
+            for username in names:
+                entry = users[username]
+                current = entry.get("supervisors")
+                if current is None:
+                    current = CommentedMap()
+                block = current.get(workbook_id)
+                if block is None:
+                    block = CommentedMap()
+                if default is not UNCHANGED:
+                    if default:
+                        if "default" in block:
+                            block["default"] = default
+                        else:
+                            block.insert(0, "default", default)
+                    else:
+                        block.pop("default", None)
+                overrides = block.get("tasks")
+                if overrides is None:
+                    overrides = CommentedMap()
+                for task_id, trainer in task_changes.items():
+                    if trainer:
+                        overrides[task_id] = trainer
+                    else:
+                        overrides.pop(task_id, None)
+                effective = block.get("default")
+                for task_id in [k for k, v in overrides.items() if v == effective]:
+                    del overrides[task_id]
+                if overrides:
+                    block["tasks"] = overrides
+                else:
+                    block.pop("tasks", None)
+                if block:
+                    current[workbook_id] = block
+                else:
+                    current.pop(workbook_id, None)
+                if current:
+                    entry["supervisors"] = current
+                else:
+                    entry.pop("supervisors", None)
 
         self._modify(change)
 
