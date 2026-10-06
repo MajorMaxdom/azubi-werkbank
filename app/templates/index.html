@@ -1,7 +1,33 @@
 {% extends "page.html" %}
 {% block title %}{{ t('index.title') }}{% endblock %}
 {% block content %}
+{% if identity and identity.is_trainer %}
+<h1 class="page-title">{{ t('mine.heading') }}</h1>
+<p class="page-intro">{{ t('mine.intro') }}</p>
+{% if assignments %}
+<ul class="card-list assignment-list">
+  {% for a in assignments %}
+  <li class="card">
+    <div class="card-meta">
+      <span class="micro-label">{{ a.view.meta.title }}</span>
+      {% if a.partial %}<span class="micro-label">{{ t('mine.partial', numbers=a.numbers | join(', ')) }}</span>{% endif %}
+    </div>
+    <h2 class="card-title"><a href="/workbooks/{{ a.view.meta.id }}/users/{{ a.username }}">{{ a.user.name }}</a> <span class="mono muted">{{ a.username }}</span></h2>
+    <div class="card-progress">
+      <progress class="progress-bar progress-bar-light" max="{{ a.pv.total }}" value="{{ a.pv.done }}" aria-label="{{ t('topbar.progress_label') }}"></progress>
+      <span class="micro-label">{{ t('index.progress', done=a.pv.done, total=a.pv.total) }}</span>
+      {% if a.open_checks %}<span class="status status-invited">{{ t('mine.open_checks', count=a.open_checks) }}</span>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">{{ t('mine.empty') }}</p>
+{% endif %}
+<h2 class="page-title page-title-second">{{ t('mine.all_workbooks') }}</h2>
+{% else %}
 <h1 class="page-title">{{ t('index.heading') }}</h1>
+{% endif %}
 {% if entries %}
 <ul class="card-list">
   {% for wb, pv in entries %}

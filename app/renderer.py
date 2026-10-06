@@ -9,6 +9,7 @@ import json
 import mimetypes
 import re
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
 from functools import cache
 from pathlib import Path
@@ -207,7 +208,22 @@ def create_environment(t: Translator | None = None) -> Environment:
     env.filters["md"] = render_markdown
     env.filters["md_inline"] = render_markdown_inline
     env.filters["textarea_rows"] = textarea_rows
+    env.filters["de_date"] = german_date
     return env
+
+
+def german_date(value) -> str:
+    """ISO date or datetime -> ``dd.mm.yyyy`` (local time for datetimes)."""
+    if not value:
+        return ""
+    if isinstance(value, datetime):
+        return value.astimezone().strftime("%d.%m.%Y")
+    if isinstance(value, date):
+        return value.strftime("%d.%m.%Y")
+    try:
+        return date.fromisoformat(str(value)).strftime("%d.%m.%Y")
+    except ValueError:
+        return str(value)
 
 
 def textarea_rows(height: int | None) -> int:

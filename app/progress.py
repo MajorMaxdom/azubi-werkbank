@@ -36,7 +36,7 @@ class CorruptProgress(RuntimeError):
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC).replace(microsecond=0)
+    return datetime.now(UTC)
 
 
 class ProgressStore:
@@ -153,3 +153,34 @@ def validate_header(fields: list[HeaderField], values: dict[str, object]) -> dic
             _check_date(value, field_id) if field.type == "date" else _check_text(value, field_id)
         )
     return clean
+
+
+# --------------------------------------------------------------------------- review helpers
+
+
+def responsible_tasks(user, workbook_id: str, trainer: str, task_ids: list[str]) -> list[str]:
+    """Task ids of ``user``'s workbook for which ``trainer`` is the Fachbetreuer."""
+    return [tid for tid in task_ids if user.supervisor_for(workbook_id, tid) == trainer]
+
+
+def needs_check(tp) -> bool:
+    """Done, and not reviewed since the apprentice last changed it."""
+    if tp is None or not tp.done:
+        return False
+    review = tp.review
+    if review is None or review.status is None or review.reviewed_at is None:
+        return True
+    return bool(tp.updated_at and tp.updated_at > review.reviewed_at)
+
+
+def orphaned_answers(catalog: Catalog, progress: Progress) -> list[tuple[str, str, AnswerValue]]:
+    """Saved answers whose task or answer field no longer exists in the catalog."""
+    tasks = {t.id: t for d in catalog.days for m in d.modules for t in m.tasks}
+    orphans = []
+    for task_id, tp in sorted(progress.tasks.items()):
+        task = tasks.get(task_id)
+        known = {a.id for a in task.answers} if task else set()
+        for answer_id, value in tp.answers.items():
+            if answer_id not in known:
+                orphans.append((task_id, answer_id, value))
+    return orphans

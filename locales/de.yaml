@@ -10,6 +10,7 @@ nav:
   user: Benutzer
   users: Nutzer
   catalogs: Kataloge
+  overview: Übersicht
   home: Zur Startseite
 
 day:
@@ -58,6 +59,41 @@ trainer:
   comment: Kommentar
   comment_placeholder: "Kommentar / Feedback …"
 
+overview:
+  title: Übersicht
+  heading: Übersicht aller Azubis
+  intro: Jede Kachel ist eine Aufgabe. Ein Klick öffnet die Aufgabe in der Bewertungsansicht.
+  apprentice: Azubi
+  done: Erledigt
+  open_checks: Zu prüfen
+  supervisor: Fachbetreuer
+  state_open: offen
+  state_done: erledigt, noch nicht geprüft
+  state_ok: geprüft – OK
+  state_redo: Nacharbeiten
+  done_at: "(erledigt am {date})"
+  no_apprentices: Diesem Heft sind keine aktiven Azubis zugeordnet.
+
+mine:
+  heading: Meine Azubis
+  intro: Hefte, in denen du als Fachbetreuer eingetragen bist.
+  empty: Du bist noch bei keinem Azubi als Fachbetreuer eingetragen.
+  partial: "nur Aufgaben {numbers}"
+  open_checks:
+    one: "{count} Aufgabe zu prüfen"
+    other: "{count} Aufgaben zu prüfen"
+  review: Bewerten
+  all_workbooks: Alle Arbeitshefte
+
+review:
+  heading: Rückmeldung deines Fachbetreuers
+  supervisor: "Zuständig: {name}"
+  reviewed: "Zuletzt bewertet von {name} am {date}"
+  bar: "Bewertungsansicht – Arbeitsheft von {name} ({username})"
+  to_overview: Zur Übersicht
+  orphans: Verwaiste Antworten
+  orphans_hint: Diese Antworten gehören zu Aufgaben oder Feldern, die es im Katalog nicht mehr gibt. Sie bleiben gespeichert, werden dem Azubi aber nicht mehr angezeigt.
+
 signoff:
   title: Gesamtbewertung & Abnahme
   comment: "Gesamtfeedback:"
@@ -65,6 +101,8 @@ signoff:
   date: Geprüft am
   by: Geprüft durch
   by_placeholder: Name Fachbetreuer/in
+  by_auto: wird beim Speichern eingetragen
+  done: "Abgenommen am {date}"
 
 app:
   name: Arbeitshefte

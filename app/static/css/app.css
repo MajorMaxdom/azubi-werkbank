@@ -777,6 +777,77 @@ details.overrides .table-wrap { margin: 0; padding: 0 12px 12px; }
 .status-no_access { color: var(--level-ochre); border-color: color-mix(in srgb, var(--level-ochre) 40%, white); }
 .status-inactive { color: var(--muted); border-color: var(--line); }
 
+/* ---------------------------------------------------------------- review */
+
+.review-note {
+  margin-top: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+  background: var(--trainer-bg);
+  border-left: 3px solid var(--level-ochre);
+  border-radius: var(--radius);
+}
+.review-note.review-ok { border-left-color: var(--ok); }
+.review-note.review-redo { border-left-color: var(--redo); }
+.review-note .micro-label { margin-bottom: 2px; }
+.review-status { display: inline-block; margin-right: 8px; }
+.review-ok .review-status { color: var(--ok); }
+.review-redo .review-status { color: var(--redo); }
+.review-comment { margin: 4px 0 0; white-space: pre-wrap; }
+
+.trainer-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 8px; }
+.trainer-top .trainer-head { margin-bottom: 0; }
+.trainer-owner { font-size: 12.5px; color: var(--muted); }
+.trainer-meta { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.review-select.is-ok { color: var(--ok); border-color: var(--ok); font-weight: 600; }
+.review-select.is-redo { color: var(--redo); border-color: var(--redo); font-weight: 600; }
+.trainer select:disabled,
+.trainer textarea:disabled { background: var(--card); }
+
+.review-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--trainer-bg);
+  border-left: 3px solid var(--level-ochre);
+  border-radius: var(--radius);
+}
+.review-bar a { font-weight: 500; }
+
+.orphans {
+  margin-top: 36px;
+  padding: 20px 24px;
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+.orphans h2 { margin: 0 0 6px; font-size: 16px; }
+.orphans dl { margin: 12px 0 0; }
+.orphans dt { margin-top: 10px; color: var(--muted); }
+.orphans dd { margin: 2px 0 0; white-space: pre-wrap; }
+
+.signoff-comment { white-space: pre-wrap; margin-bottom: 10px; }
+.signoff-meta { margin: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--ok); }
+
+/* ---------------------------------------------------------------- overview */
+
+.muted { color: var(--muted); font-weight: 400; }
+.page-title-second { margin-top: 40px; font-size: 20px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 24px; font-size: 13px; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.overview-section { margin-bottom: 36px; }
+.overview-section .section-title { margin-bottom: 12px; }
+.overview-table th[scope="row"] { font-weight: 600; white-space: nowrap; background: var(--card); text-transform: none; letter-spacing: 0; font-family: var(--font-sans); font-size: 14px; color: var(--ink); }
+.overview-table td { vertical-align: middle; }
+.port-link { display: inline-block; }
+.port-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.port.is-ok { border-color: var(--ink); }
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 600px) {

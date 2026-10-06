@@ -1,15 +1,22 @@
+{% set so = pv.progress.signoff if pv.progress else none %}
+{% set so_locked = not review %}
 <section class="signoff" id="signoff">
   <h2>{{ wb.meta.signoff.title or t('signoff.title') }}</h2>
+  {% if is_trainer %}
   <label class="micro-label" for="signoff-comment">{{ t('signoff.comment') }}</label>
-  <textarea id="signoff-comment" data-signoff="comment" rows="5" placeholder="{{ t('signoff.comment_placeholder') }}"></textarea>
+  <textarea id="signoff-comment" data-signoff="comment" rows="5" placeholder="{{ t('signoff.comment_placeholder') }}"{% if so_locked %} disabled{% endif %}>{{ so.comment if so else '' }}</textarea>
   <div class="field-grid">
     <div class="field">
       <label class="micro-label" for="signoff-date">{{ t('signoff.date') }}</label>
-      <input id="signoff-date" data-signoff="date" type="date">
+      <input id="signoff-date" data-signoff="date" type="date" value="{{ so.date or '' if so else '' }}"{% if so_locked %} disabled{% endif %}>
     </div>
     <div class="field">
-      <label class="micro-label" for="signoff-by">{{ t('signoff.by') }}</label>
-      <input id="signoff-by" data-signoff="by" type="text" placeholder="{{ t('signoff.by_placeholder') }}">
+      <span class="micro-label">{{ t('signoff.by') }}</span>
+      <p class="static-value" data-signoff-by>{{ review.name(so.by) if review and so and so.by else t('signoff.by_auto') }}</p>
     </div>
   </div>
+  {% else %}
+  {% if so.comment %}<div class="signoff-comment">{{ so.comment }}</div>{% endif %}
+  <p class="signoff-meta">{{ t('signoff.done', date=so.date | de_date) }}</p>
+  {% endif %}
 </section>

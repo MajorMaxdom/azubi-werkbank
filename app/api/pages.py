@@ -4,15 +4,18 @@ Every route here requires a logged-in user."""
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from app.api.common import render
-from app.auth import Identity, get_current_user
+from app.auth import Forbidden, Identity, get_current_user
 from app.models.catalog import ID_PATTERN, is_safe_asset_path
-from app.renderer import build_progress_view
+from app.models.users import User
+from app.progress import needs_check, orphaned_answers, responsible_tasks
+from app.renderer import ProgressView, WorkbookView, build_progress_view
 
 router = APIRouter()
 
@@ -35,6 +38,54 @@ def get_view(request: Request, workbook_id: str, identity: Identity):
     return view
 
 
+@dataclass
+class Assignment:
+    """One apprentice workbook a Fachbetreuer is responsible for (fully or in part)."""
+
+    username: str
+    user: User
+    view: WorkbookView
+    pv: ProgressView
+    tasks: list[str]  # responsible task ids
+    partial: bool
+    open_checks: int
+    numbers: list[str]
+
+
+def assignments_for(request: Request, trainer: str) -> list[Assignment]:
+    registry = request.app.state.registry
+    store = request.app.state.progress
+    result = []
+    for username, user in sorted(request.app.state.users.all().items()):
+        if user.role != "apprentice" or not user.active:
+            continue
+        for wid in registry.catalogs():
+            if not user.may_open(wid):
+                continue
+            view = registry.view(wid)
+            if view is None:
+                continue
+            task_ids = list(view.tasks_by_id)
+            mine = responsible_tasks(user, wid, trainer, task_ids)
+            if not mine:
+                continue
+            progress = store.load(wid, username)
+            pv = build_progress_view(view, progress, editable=False)
+            result.append(
+                Assignment(
+                    username=username,
+                    user=user,
+                    view=view,
+                    pv=pv,
+                    tasks=mine,
+                    partial=len(mine) < len(task_ids),
+                    open_checks=sum(needs_check(progress.tasks.get(tid)) for tid in mine),
+                    numbers=[view.tasks_by_id[tid].number for tid in mine],
+                )
+            )
+    return result
+
+
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, identity: CurrentUser) -> HTMLResponse:
     registry = request.app.state.registry
@@ -48,7 +99,8 @@ def index(request: Request, identity: CurrentUser) -> HTMLResponse:
         if identity.user.role == "apprentice":
             pv = build_progress_view(view, store.load(wid, identity.username), editable=True)
         entries.append((view, pv))
-    return render(request, "index.html", entries=entries)
+    assignments = assignments_for(request, identity.username) if identity.is_trainer else []
+    return render(request, "index.html", entries=entries, assignments=assignments)
 
 
 @router.get("/workbooks/{workbook_id}", response_class=HTMLResponse)
@@ -66,6 +118,55 @@ def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLR
         static=False,
         asset_url=asset_url,
         pv=build_progress_view(view, progress, editable=apprentice),
+    )
+
+
+@dataclass
+class ReviewContext:
+    username: str
+    user: User
+    supervisors: dict[str, str]  # task id -> Fachbetreuer display name
+    names: dict[str, str]  # username -> display name
+    orphans: list
+
+    def name(self, username: str | None) -> str:
+        if not username:
+            return ""
+        return self.names.get(username, username)
+
+
+@router.get("/workbooks/{workbook_id}/users/{username}", response_class=HTMLResponse)
+def review(request: Request, workbook_id: str, username: str, identity: CurrentUser):
+    if not identity.is_trainer:
+        raise Forbidden
+    view = get_view(request, workbook_id, identity)
+    user = request.app.state.users.get(username) if _ID_RE.fullmatch(username) else None
+    if user is None or user.role != "apprentice" or not user.may_open(workbook_id):
+        raise HTTPException(status_code=404)
+    progress = request.app.state.progress.load(workbook_id, username)
+    users = request.app.state.users.all()
+    names = {name: u.name for name, u in users.items()}
+    supervisors = {}
+    for tid in view.tasks_by_id:
+        sup = user.supervisor_for(workbook_id, tid)
+        if sup:
+            supervisors[tid] = names.get(sup, sup)
+    context = ReviewContext(
+        username=username,
+        user=user,
+        supervisors=supervisors,
+        names=names,
+        orphans=orphaned_answers(view.catalog, progress),
+    )
+    return render(
+        request,
+        "workbook.html",
+        wb=view,
+        is_trainer=True,
+        static=False,
+        asset_url=asset_url,
+        pv=build_progress_view(view, progress, editable=False),
+        review=context,
     )
 
 

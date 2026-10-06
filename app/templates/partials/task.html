@@ -49,9 +49,21 @@
   </details>
   {% endif %}
 
+  {% set rv = pv.task(task.id).review if pv.task(task.id) else none %}
+  {% if not is_trainer and rv and (rv.status or rv.comment) %}
+  <div class="review-note review-{{ rv.status or 'none' }}">
+    <span class="micro-label">{{ t('review.heading') }}</span>
+    {% if rv.status == 'ok' %}<strong class="review-status">{{ t('trainer.status_ok') }}</strong>{% elif rv.status == 'redo' %}<strong class="review-status">{{ t('trainer.status_redo') }}</strong>{% endif %}
+    {% if rv.comment %}<p class="review-comment">{{ rv.comment }}</p>{% endif %}
+  </div>
+  {% endif %}
+
   {% if is_trainer %}
   <div class="trainer">
-    <div class="micro-label trainer-head">{{ t('trainer.heading') }}</div>
+    <div class="trainer-top">
+      <span class="micro-label trainer-head">{{ t('trainer.heading') }}</span>
+      {% if review and review.supervisors.get(task.id) %}<span class="trainer-owner">{{ t('review.supervisor', name=review.supervisors.get(task.id)) }}</span>{% endif %}
+    </div>
     {% if task.trainer and task.trainer.expectations %}
     <div class="trainer-expect">
       <strong>{{ t('trainer.expectations') }}</strong>
@@ -63,14 +75,15 @@
     {% endif %}
     <div class="trainer-row">
       <label class="visually-hidden" for="status-{{ task.id }}">{{ t('trainer.status') }}</label>
-      <select id="status-{{ task.id }}" data-review-status>
+      <select id="status-{{ task.id }}" class="review-select{% if rv and rv.status %} is-{{ rv.status }}{% endif %}" data-review-status{% if not review %} disabled{% endif %}>
         <option value="">{{ t('trainer.status_none') }}</option>
-        <option value="ok">{{ t('trainer.status_ok') }}</option>
-        <option value="redo">{{ t('trainer.status_redo') }}</option>
+        <option value="ok"{% if rv and rv.status == 'ok' %} selected{% endif %}>{{ t('trainer.status_ok') }}</option>
+        <option value="redo"{% if rv and rv.status == 'redo' %} selected{% endif %}>{{ t('trainer.status_redo') }}</option>
       </select>
       <label class="visually-hidden" for="comment-{{ task.id }}">{{ t('trainer.comment') }}</label>
-      <textarea id="comment-{{ task.id }}" data-review-comment rows="2" placeholder="{{ t('trainer.comment_placeholder') }}"></textarea>
+      <textarea id="comment-{{ task.id }}" data-review-comment rows="2" placeholder="{{ t('trainer.comment_placeholder') }}"{% if not review %} disabled{% endif %}>{{ rv.comment if rv else '' }}</textarea>
     </div>
+    {% if review and rv and rv.reviewed_by %}<p class="trainer-meta">{{ t('review.reviewed', name=review.name(rv.reviewed_by), date=rv.reviewed_at.astimezone().strftime('%d.%m.%Y %H:%M')) }}</p>{% endif %}
   </div>
   {% endif %}
 </article>

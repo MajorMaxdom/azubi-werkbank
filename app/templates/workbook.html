@@ -8,6 +8,7 @@
 {% block body_class %}{{ 'workbook is-trainer' if is_trainer else 'workbook' }}{% endblock %}
 {% block body %}
 {% set locked = not pv.editable and not static %}
+{% set autosave = pv.editable or review %}
 <div class="sticky-head">
   {% if not static %}
   <div class="update-banner" data-update-banner hidden>
@@ -21,7 +22,7 @@
       <progress class="progress-bar" max="{{ wb.task_count }}" value="{{ pv.done }}" aria-label="{{ t('topbar.progress_label') }}"></progress>
       <span class="progress-text" data-progress-text>{{ t('topbar.progress', done=pv.done, total=wb.task_count, percent=pv.percent) }}</span>
     </div>
-    {% if pv.editable %}<span class="save-status" data-save-status role="status" aria-live="polite"></span>{% endif %}
+    {% if autosave %}<span class="save-status" data-save-status role="status" aria-live="polite"></span>{% endif %}
     {% include "partials/user_menu.html" %}
   </header>
   <nav class="quicknav" aria-label="{{ t('nav.label') }}">
@@ -31,12 +32,17 @@
   </nav>
 </div>
 
-<main class="sheet" data-workbook="{{ wb.meta.id }}"{% if pv.editable %} data-autosave
+<main class="sheet" data-workbook="{{ wb.meta.id }}"{% if review %} data-review-user="{{ review.username }}"{% endif %}{% if autosave %} data-autosave
   data-text-saving="{{ t('autosave.saving') }}" data-text-saved="{{ t('autosave.saved') }}"
   data-text-offline="{{ t('autosave.offline') }}" data-text-error="{{ t('autosave.error') }}"
   data-text-logged-out="{{ t('autosave.logged_out') }}" data-text-unsaved="{{ t('autosave.unsaved') }}"
   data-text-progress="{{ t('topbar.progress', done='{done}', total='{total}', percent='{percent}') }}"{% endif %}>
-  {% if locked %}<p class="preview-note">{{ t('workbook.preview_trainer') }}</p>{% endif %}
+  {% if review %}
+  <p class="review-bar">
+    <span>{{ t('review.bar', name=review.user.name, username=review.username) }}</span>
+    <a href="/admin/overview#{{ wb.meta.id }}">{{ t('review.to_overview') }}</a>
+  </p>
+  {% elif locked %}<p class="preview-note">{{ t('workbook.preview_trainer') }}</p>{% endif %}
   <header class="doc-head">
     <h1>{{ wb.meta.title }}</h1>
     {% if wb.meta.subtitle %}<p class="doc-sub">{{ wb.meta.subtitle }}</p>{% endif %}
@@ -86,7 +92,20 @@
   </section>
   {% endfor %}
 
-  {% if wb.meta.signoff.enabled and is_trainer %}
+  {% if review and review.orphans %}
+  <section class="orphans">
+    <h2>{{ t('review.orphans') }}</h2>
+    <p class="field-hint">{{ t('review.orphans_hint') }}</p>
+    <dl>
+      {% for task_id, answer_id, value in review.orphans %}
+      <dt class="mono">{{ task_id }} · {{ answer_id }}</dt>
+      <dd>{{ value | join(', ') if value is not string else value }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {% if wb.meta.signoff.enabled and (is_trainer or (pv.progress and pv.progress.signoff.date)) %}
   {% include "partials/signoff.html" %}
   {% endif %}
 

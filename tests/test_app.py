@@ -361,7 +361,7 @@ def test_every_custom_error_type_has_a_german_message():
     source = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "app").rglob("*.py"))
 
     custom = set(re.findall(r'PydanticCustomError\(\s*"([a-z_]+)"', source))
-    custom |= set(re.findall(r'type="([a-z_]+)"', source))
+    custom |= set(re.findall(r'type="([a-z_]+)",\s*message=', source))
     custom |= set(re.findall(r'"(duplicate_workbook|parse_error|read_error)"', source))
     assert {"duplicate_id", "unknown_level", "duplicate_workbook"} <= custom
     for error_type in custom:

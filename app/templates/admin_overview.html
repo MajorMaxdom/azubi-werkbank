@@ -1,0 +1,54 @@
+{% extends "page.html" %}
+{% block title %}{{ t('overview.title') }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('overview.heading') }}</h1>
+<p class="page-intro">{{ t('overview.intro') }}</p>
+<p class="legend">
+  <span class="legend-item"><span class="port"></span>{{ t('overview.state_open') }}</span>
+  <span class="legend-item"><span class="port is-lit"></span>{{ t('overview.state_done') }}</span>
+  <span class="legend-item"><span class="port is-lit is-ok"></span>{{ t('overview.state_ok') }}</span>
+  <span class="legend-item"><span class="port is-redo"></span>{{ t('overview.state_redo') }}</span>
+</p>
+{% for section in sections %}
+{% set wb = section.view %}
+<section class="overview-section" id="{{ wb.meta.id }}">
+  <h2 class="section-title">{{ wb.meta.title }} <span class="mono muted">({{ wb.meta.id }})</span></h2>
+  {% if section.rows %}
+  <div class="table-wrap">
+    <table class="data-table overview-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ t('overview.apprentice') }}</th>
+          {% for code, cells in section.rows[0].modules %}<th scope="col" class="mono">{{ code }}</th>{% endfor %}
+          <th scope="col">{{ t('overview.done') }}</th>
+          <th scope="col">{{ t('overview.open_checks') }}</th>
+          <th scope="col">{{ t('overview.supervisor') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in section.rows %}
+        <tr>
+          <th scope="row"><a href="/workbooks/{{ wb.meta.id }}/users/{{ row.username }}">{{ row.user.name }}</a> <span class="mono muted">{{ row.username }}</span></th>
+          {% for code, cells in row.modules %}
+          <td>
+            <span class="ports">
+              {% for cell in cells %}<a class="port port-link{% if cell.state == 'done' %} is-lit{% elif cell.state == 'ok' %} is-lit is-ok{% elif cell.state == 'redo' %} is-redo{% endif %}" href="/workbooks/{{ wb.meta.id }}/users/{{ row.username }}#task-{{ cell.task_id }}" title="{{ cell.label }}"><span class="visually-hidden">{{ cell.label }}</span></a>{% endfor %}
+            </span>
+          </td>
+          {% endfor %}
+          <td class="mono">{{ row.done }} / {{ row.total }}</td>
+          <td class="mono">{{ row.open_checks }}</td>
+          <td>{{ row.supervisor }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">{{ t('overview.no_apprentices') }}</p>
+  {% endif %}
+</section>
+{% else %}
+<p class="empty">{{ t('index.empty') }}</p>
+{% endfor %}
+{% endblock %}

@@ -197,7 +197,9 @@ users:
 Pages (German UI, English URLs):
 - `GET /login`, `POST /login`, `POST /logout`
 - `GET /invite/{token}`, `POST /invite/{token}`
-- `GET /` — workbook list with own progress (trainers: all workbooks)
+- `GET /` — workbook list with own progress (trainers: all workbooks, plus
+  "Meine Azubis": apprentice workbooks they are Fachbetreuer for, with
+  progress and open checks)
 - `GET /workbooks/{workbook_id}` — workbook for the current user
 - `GET /workbooks/{workbook_id}/theme.css` — generated color overrides (section 6a)
 - `GET /workbooks/{workbook_id}/users/{username}` — trainer: view one user's

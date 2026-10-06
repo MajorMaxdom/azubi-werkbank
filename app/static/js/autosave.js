@@ -189,9 +189,54 @@
 
   // ------------------------------------------------------------------ events
 
+  var reviewUser = root.getAttribute("data-review-user");
+
+  function handleReview(event, el) {
+    var base = "/api/progress/" + workbook + "/users/" + reviewUser;
+    var isText = el.tagName === "TEXTAREA";
+    if (isText && event.type !== "input") return;
+    if (!isText && event.type !== "change") return;
+    var delay = isText ? DEBOUNCE_MS : 0;
+    if (el.hasAttribute("data-signoff")) {
+      var comment = document.querySelector('[data-signoff="comment"]');
+      var date = document.querySelector('[data-signoff="date"]');
+      queue("signoff", base + "/signoff", {
+        comment: comment ? comment.value : "",
+        date: date ? date.value : ""
+      }, delay);
+      return;
+    }
+    var task = el.closest("[data-task]");
+    if (!task || !(el.hasAttribute("data-review-status") || el.hasAttribute("data-review-comment"))) {
+      return;
+    }
+    var taskId = task.getAttribute("data-task");
+    var select = task.querySelector("[data-review-status]");
+    var text = task.querySelector("[data-review-comment]");
+    var status = select ? select.value : "";
+    queue("review:" + taskId, base + "/tasks/" + taskId + "/review", {
+      status: status || null,
+      comment: text ? text.value : ""
+    }, delay);
+    if (select) {
+      select.classList.toggle("is-ok", status === "ok");
+      select.classList.toggle("is-redo", status === "redo");
+    }
+    var port = document.querySelector('[data-port="' + taskId + '"]');
+    var done = task.querySelector("[data-done]");
+    if (port) {
+      port.classList.toggle("is-redo", status === "redo");
+      port.classList.toggle("is-lit", status !== "redo" && !!(done && done.checked));
+    }
+  }
+
   function handle(event) {
     var el = event.target;
     var base = "/api/progress/" + workbook;
+    if (reviewUser) {
+      handleReview(event, el);
+      return;
+    }
     if (el.hasAttribute("data-header")) {
       var patch = {};
       patch[el.getAttribute("data-header")] = el.value;

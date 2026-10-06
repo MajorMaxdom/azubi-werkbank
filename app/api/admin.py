@@ -15,6 +15,8 @@ from app.i18n import Translator
 from app.loader import CatalogError, Entry
 from app.models.catalog import ID_PATTERN
 from app.models.users import User
+from app.progress import needs_check
+from app.renderer import german_date
 from app.theme import contrast_warnings
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_trainer)])
@@ -344,3 +346,99 @@ async def save_user(request: Request, username: str) -> HTMLResponse:
         managed=list(catalogs),
     )
     return edit_page(request, username, request.app.state.users.get(username), saved=True)
+
+
+# --------------------------------------------------------------------------- overview
+
+
+@dataclass
+class Cell:
+    task_id: str
+    number: str
+    title: str
+    state: str  # open | done | ok | redo
+    label: str
+
+
+@dataclass
+class OverviewRow:
+    username: str
+    user: User
+    modules: list[tuple[str, list[Cell]]]
+    done: int
+    total: int
+    open_checks: int
+    supervisor: str
+
+
+@dataclass
+class OverviewSection:
+    view: object
+    rows: list[OverviewRow]
+
+
+def _cell_state(tp) -> str:
+    if tp is not None and tp.review is not None and tp.review.status == "redo":
+        return "redo"
+    if tp is not None and tp.done:
+        if tp.review is not None and tp.review.status == "ok" and not needs_check(tp):
+            return "ok"
+        return "done"
+    return "open"
+
+
+def overview_sections(request: Request) -> list[OverviewSection]:
+    t = request.app.state.translator
+    registry = request.app.state.registry
+    store = request.app.state.progress
+    users = request.app.state.users.all()
+    names = {name: u.name for name, u in users.items()}
+    labels = {
+        "open": t("overview.state_open"),
+        "done": t("overview.state_done"),
+        "ok": t("overview.state_ok"),
+        "redo": t("overview.state_redo"),
+    }
+    sections = []
+    for wid in registry.catalogs():
+        view = registry.view(wid)
+        if view is None:
+            continue
+        rows = []
+        for username, user in sorted(users.items(), key=lambda item: item[1].name.lower()):
+            if user.role != "apprentice" or not user.active or not user.may_open(wid):
+                continue
+            progress = store.load(wid, username)
+            modules = []
+            for day in view.days:
+                for module in day.modules:
+                    cells = []
+                    for tv in module.tasks:
+                        tp = progress.tasks.get(tv.task.id)
+                        state = _cell_state(tp)
+                        label = f"{tv.number} {tv.task.title} – {labels[state]}"
+                        if tp is not None and tp.done_at and state != "open":
+                            label += " " + t("overview.done_at", date=german_date(tp.done_at))
+                        cells.append(Cell(tv.task.id, tv.number, tv.task.title, state, label))
+                    modules.append((module.module.code, cells))
+            task_ids = list(view.tasks_by_id)
+            supervision = user.supervisors.get(wid)
+            default = supervision.default if supervision else None
+            rows.append(
+                OverviewRow(
+                    username=username,
+                    user=user,
+                    modules=modules,
+                    done=progress.done_count(set(task_ids)),
+                    total=len(task_ids),
+                    open_checks=sum(needs_check(progress.tasks.get(tid)) for tid in task_ids),
+                    supervisor=names.get(default, default) if default else "",
+                )
+            )
+        sections.append(OverviewSection(view=view, rows=rows))
+    return sections
+
+
+@router.get("/overview", response_class=HTMLResponse)
+def overview(request: Request) -> HTMLResponse:
+    return render(request, "admin_overview.html", sections=overview_sections(request))

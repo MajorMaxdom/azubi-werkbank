@@ -4,7 +4,29 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.4.0] - 2026-10-06
+## [0.5.0] - 2026-10-06
+
+### Added
+- Review view `/workbooks/{workbook}/users/{username}` for Fachbetreuer:
+  apprentice answers read-only, review status (— / OK / Nacharbeiten) and
+  comment autosaved per task, responsible Fachbetreuer per task, last
+  reviewer and time, "Verwaiste Antworten" for answers without a catalog
+  field, sign-off (comment and date; "Geprüft durch" is the acting
+  Fachbetreuer from the session).
+- JSON API `PATCH …/users/{username}/tasks/{task}/review` and
+  `PATCH …/users/{username}/signoff` (Fachbetreuer only; apprentices get 403).
+- `/admin/overview`: matrix apprentices × tasks per workbook with port LEDs
+  (open, done, checked OK, Nacharbeiten), done counts, open checks and the
+  responsible Fachbetreuer; every LED links to the task in the review view.
+- Start page for Fachbetreuer: "Meine Azubis" — every apprentice workbook
+  they are responsible for (fully or for single tasks) with progress and
+  open checks. A check re-opens when the apprentice changes a task after
+  the review.
+- Apprentices see review status, comment and sign-off read-only; trainer
+  expectations and notes never reach their HTML (tested on the full
+  network-security workbook).
+
+ - 2026-10-06
 
 ### Added
 - Progress store `progress/<workbook>/<user>.json` (atomic writes under a
