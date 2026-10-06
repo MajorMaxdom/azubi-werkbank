@@ -141,9 +141,14 @@ class Answer(Strict):
     items: list[NonEmpty] | None = None
     options: list[NonEmpty] | None = None
     multiple: bool = False
+    monospace: bool = False
 
     @model_validator(mode="after")
     def _type_requirements(self) -> Answer:
+        if self.monospace and self.type not in ("text", "short"):
+            raise PydanticCustomError(
+                "monospace_type", "'monospace' is only allowed for answer types text and short"
+            )
         if self.type == "choice" and not self.options:
             raise PydanticCustomError("choice_options", "Answer type 'choice' needs 'options'")
         if self.type == "checklist" and not self.items:

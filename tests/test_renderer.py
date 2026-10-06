@@ -133,6 +133,7 @@ def test_trainer_content_only_in_trainer_view(catalog_data):
 def test_answer_types_render(catalog_data):
     task_of(catalog_data)["answers"] = [
         {"id": "txt", "type": "text", "label": "L1", "height": 150},
+        {"id": "mono", "type": "text", "monospace": True},
         {"id": "sh", "type": "short", "label": "L2", "placeholder": "P"},
         {"id": "cl", "type": "checklist", "label": "L3", "items": ["A", "B"]},
         {"id": "ch", "type": "choice", "label": "L4", "options": ["X", "Y"]},
@@ -141,6 +142,7 @@ def test_answer_types_render(catalog_data):
     ]
     html = render_static(Catalog.model_validate(catalog_data))
     assert '<textarea id="a-t1-txt" rows="6"' in html
+    assert '<textarea id="a-t1-mono" class="mono-input" rows="4"' in html
     assert '<input id="a-t1-sh" type="text" placeholder="P">' in html
     assert html.count('type="checkbox" name="a-t1-cl"') == 2
     assert html.count('type="radio" name="a-t1-ch"') == 2

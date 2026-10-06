@@ -118,6 +118,7 @@ errors:
   blocks_exclusive: "„blocks“ kann nicht zusammen mit {fields} verwendet werden."
   choice_options: Antworttyp „choice“ braucht „options“.
   checklist_items: Antworttyp „checklist“ braucht „items“.
+  monospace_type: „monospace“ ist nur bei den Antworttypen „text“ und „short“ erlaubt.
   asset_path: "Bildpfad „{src}“ muss innerhalb von workbooks/assets/ liegen."
   color_null: "Farbe „{key}“ ist leer – Hex-Farben in YAML in Anführungszeichen setzen, z. B. \"#1B365D\"."
   parse_error: "Syntaxfehler: {message}"

@@ -22,9 +22,11 @@ SKIP_TAGS = {"script", "style", "title", "button", "option", "summary"}
 SKIP_TEXT = {"0 / 0 erledigt"}
 # Labels that the reference writes inline and the app renders as micro labels.
 LABEL_PREFIXES = ("Anforderung: ", "Lernziel: ")
-# Agreed changes since the conversion (workbook 4.1.0): the header field
-# "Ausbilder/in" was removed and "Ausbilder" is called "Fachbetreuer".
+# Agreed changes since the conversion: the header field "Ausbilder/in" was
+# removed and "Ausbilder" is called "Fachbetreuer" (4.1.0); the paragraph and
+# footer about the old "Stand speichern" download now describe autosave (4.2.0).
 REMOVED = {"Ausbilder/in", "Name Ausbilder/in"}
+REWRITTEN = ("So arbeitest du:", "REV 4.0")
 
 
 def adapt(text: str) -> str:
@@ -95,7 +97,7 @@ def test_every_reference_text_is_rendered(reference, rendered):
     haystack = "\n".join(rendered.segments)
     missing = []
     for segment in reference.segments:
-        if segment in SKIP_TEXT or segment in REMOVED:
+        if segment in SKIP_TEXT or segment in REMOVED or segment.startswith(REWRITTEN):
             continue
         segment = adapt(segment)
         for prefix in LABEL_PREFIXES:
@@ -133,6 +135,8 @@ def test_structure_matches_reference(catalog):
     assert bonus == html.count('class="extra"')
     loads = re.findall(r'class="day-load">([^<]+)<', html)
     assert [d.load for d in view.days] == [x.replace("&middot;", "·") for x in loads]
+    mono = sum(a.monospace for tv in view.tasks_by_id.values() for a in tv.task.answers)
+    assert mono == html.count('<textarea data-answer class="code"')
     numbers = re.findall(r'class="task-id">([^<]+)<', html)
     assert [tv.number for tv in view.tasks_by_id.values()] == numbers
 
@@ -144,3 +148,9 @@ def test_apprentice_view_has_no_trainer_content(catalog):
             assert expectation[:40] not in html
     assert "Bereich Fachbetreuer" not in html
     assert "Das sollte drinstehen" not in html
+
+
+def test_autosave_wording_replaces_download_instructions(rendered):
+    text = "\n".join(rendered.segments)
+    assert "Stand speichern" not in text
+    assert "Gespeichert wird automatisch" in text

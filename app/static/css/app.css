@@ -455,6 +455,7 @@ select {
   border-radius: var(--radius);
 }
 textarea { resize: vertical; }
+.mono-input { font-family: var(--font-mono); font-size: 13.5px; background: var(--paper); }
 input::placeholder,
 textarea::placeholder { color: color-mix(in srgb, var(--muted) 70%, var(--card)); }
 

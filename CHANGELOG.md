@@ -6,10 +6,17 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Answer option `monospace: true` (types `text` and `short`) for tables,
+  protocols and command output.
+
 ### Changed
 - UI term "Ausbilder" is now "Fachbetreuer" (role value stays `trainer`).
 - `network-security` workbook 4.1.0: "Ausbilder" → "Fachbetreuer" in the
   content; header field "Ausbilder/in" removed.
+- `network-security` workbook 4.2.0: intro and footer describe autosave
+  instead of the old "Stand speichern" download; 13 answer fields are
+  monospace again, as in the reference.
 - `docs/PLAN.md`: Fachbetreuer assignment per apprentice workbook with
   per-task overrides (implemented with the `users.yaml` model in 0.3.0).
 

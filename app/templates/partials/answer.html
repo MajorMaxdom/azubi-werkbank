@@ -14,9 +14,9 @@
   {% else %}
   {% if answer.label %}<label class="micro-label" for="{{ fid }}">{{ answer.label }}</label>{% endif %}
   {% if answer.type == 'text' %}
-  <textarea id="{{ fid }}" rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}></textarea>
+  <textarea id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}></textarea>
   {% else %}
-  <input id="{{ fid }}" type="{{ 'date' if answer.type == 'date' else 'text' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}>
+  <input id="{{ fid }}"{% if answer.monospace %} class="mono-input"{% endif %} type="{{ 'date' if answer.type == 'date' else 'text' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}>
   {% endif %}
   {% endif %}
 </div>

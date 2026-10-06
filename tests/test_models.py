@@ -239,3 +239,13 @@ def test_unsafe_asset_paths(src, catalog_data):
         task.pop("requirement")
         task["blocks"] = [{"type": "image", "src": src, "alt": "x"}]
         assert "asset_path" in types(catalog_data)
+
+
+def test_monospace_only_for_text_and_short(catalog_data):
+    task_of(catalog_data)["answers"] = [
+        {"id": "a", "monospace": True},
+        {"id": "b", "type": "short", "monospace": True},
+    ]
+    assert errors_for(catalog_data) == []
+    task_of(catalog_data)["answers"] = [{"id": "c", "type": "date", "monospace": True}]
+    assert "monospace_type" in types(catalog_data)
