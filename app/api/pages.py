@@ -1,17 +1,22 @@
-"""HTML pages: start page, workbook view and the per-workbook theme stylesheet."""
+"""HTML pages: start page, workbook view, per-workbook theme and catalog assets.
+Every route here requires a logged-in user."""
 
 from __future__ import annotations
 
 import re
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
-from app.models.catalog import ID_PATTERN
+from app.api.common import render
+from app.auth import Identity, get_current_user
+from app.models.catalog import ID_PATTERN, is_safe_asset_path
 
 router = APIRouter()
 
 _ID_RE = re.compile(ID_PATTERN)
+CurrentUser = Annotated[Identity, Depends(get_current_user)]
 
 
 def asset_url(src: str) -> str:
@@ -19,8 +24,9 @@ def asset_url(src: str) -> str:
     return "/" + src
 
 
-def get_view(request: Request, workbook_id: str):
-    if not _ID_RE.fullmatch(workbook_id):
+def get_view(request: Request, workbook_id: str, identity: Identity):
+    """The workbook view if it exists and the user may open it (else 404)."""
+    if not _ID_RE.fullmatch(workbook_id) or not identity.user.may_open(workbook_id):
         raise HTTPException(status_code=404)
     view = request.app.state.registry.view(workbook_id)
     if view is None:
@@ -29,30 +35,28 @@ def get_view(request: Request, workbook_id: str):
 
 
 @router.get("/", response_class=HTMLResponse)
-def index(request: Request) -> HTMLResponse:
+def index(request: Request, identity: CurrentUser) -> HTMLResponse:
     registry = request.app.state.registry
-    views = [registry.view(wid) for wid in registry.catalogs()]
-    html = request.app.state.templates.get_template("index.html").render(
-        workbooks=[v for v in views if v is not None]
-    )
-    return HTMLResponse(html)
+    views = [registry.view(wid) for wid in registry.catalogs() if identity.user.may_open(wid)]
+    return render(request, "index.html", workbooks=[v for v in views if v is not None])
 
 
 @router.get("/workbooks/{workbook_id}", response_class=HTMLResponse)
-def workbook(request: Request, workbook_id: str) -> HTMLResponse:
-    view = get_view(request, workbook_id)
-    html = request.app.state.templates.get_template("workbook.html").render(
+def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLResponse:
+    view = get_view(request, workbook_id, identity)
+    return render(
+        request,
+        "workbook.html",
         wb=view,
-        is_trainer=False,  # roles arrive with authentication in 0.3.0
+        is_trainer=identity.is_trainer,
         static=False,
         asset_url=asset_url,
     )
-    return HTMLResponse(html)
 
 
 @router.get("/workbooks/{workbook_id}/theme.css")
-def theme(request: Request, workbook_id: str) -> Response:
-    view = get_view(request, workbook_id)
+def theme(request: Request, workbook_id: str, identity: CurrentUser) -> Response:
+    view = get_view(request, workbook_id, identity)
     etag = f'"{view.theme_hash}"'
     headers = {"Cache-Control": "no-cache", "ETag": etag}
     if etag in _etags(request.headers.get("if-none-match", "")):
@@ -62,3 +66,16 @@ def theme(request: Request, workbook_id: str) -> Response:
 
 def _etags(header: str) -> set[str]:
     return {part.strip().removeprefix("W/") for part in header.split(",") if part.strip()}
+
+
+@router.get("/assets/{path:path}")
+def asset(request: Request, path: str, identity: CurrentUser) -> FileResponse:
+    src = f"assets/{path}"
+    if not is_safe_asset_path(src):
+        raise HTTPException(status_code=404)
+    workbooks = request.app.state.config.paths.workbooks
+    root = (workbooks / "assets").resolve()
+    target = (workbooks / src).resolve()
+    if not target.is_relative_to(root) or not target.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(target)

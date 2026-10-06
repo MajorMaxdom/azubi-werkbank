@@ -1,0 +1,9 @@
+{% extends "page.html" %}
+{% block title %}{{ t('app.name') }}{% endblock %}
+{% block sheet_class %}{{ 'sheet-narrow' }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <p>{{ t(message) }}</p>
+  <p><a href="/">{{ t('nav.home') }}</a></p>
+</div>
+{% endblock %}

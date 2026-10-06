@@ -74,12 +74,85 @@ def render(
     typer.echo(f"Wrote {output}")
 
 
-@app.command()
-def serve(
-    config: Path | None = typer.Option(
-        None, "--config", "-c", help="Config file (default: $WORKBOOK_CONFIG or ./config.yaml)."
+user_app = typer.Typer(help="Manage users (users.yaml + credentials).", no_args_is_help=True)
+app.add_typer(user_app, name="user")
+
+ConfigOption = typer.Option(
+    None, "--config", "-c", help="Config file (default: $WORKBOOK_CONFIG or ./config.yaml)."
+)
+
+
+def _accounts(config: Path | None):
+    from app.auth import AccountService, CredentialStore, UserDirectory
+    from app.config import load_config
+
+    settings = load_config(config)
+    directory = UserDirectory(settings.paths.users)
+    directory.load()
+    if directory.error:
+        typer.echo(f"users.yaml is invalid: {directory.error}", err=True)
+        raise typer.Exit(1)
+    store = CredentialStore(settings.paths.data / "credentials.json")
+    return AccountService(settings, directory, store)
+
+
+@user_app.command("add")
+def user_add(
+    username: str = typer.Argument(..., help="Username (a-z, 0-9, '-')."),
+    name: str = typer.Option(..., "--name", help="Full name shown in the UI."),
+    role: str = typer.Option(..., "--role", help="trainer | apprentice"),
+    workbook: list[str] = typer.Option(
+        None, "--workbook", help="Allowed workbook id (repeatable; default: all)."
     ),
+    config: Path | None = ConfigOption,
 ) -> None:
+    """Add a user to users.yaml and print an invite link."""
+    from app.auth import is_valid_username
+
+    if role not in ("trainer", "apprentice"):
+        typer.echo("--role must be 'trainer' or 'apprentice'", err=True)
+        raise typer.Exit(2)
+    if not is_valid_username(username):
+        typer.echo(f"Invalid username: {username!r}", err=True)
+        raise typer.Exit(2)
+    accounts = _accounts(config)
+    if accounts.directory.get(username) is not None:
+        typer.echo(f"User already exists: {username}", err=True)
+        raise typer.Exit(1)
+    link = accounts.create_user(username, name, role, list(workbook or []) or None)  # type: ignore[arg-type]
+    typer.echo(f"Added {username} ({role}). Invite link (single use):")
+    typer.echo(link)
+
+
+@user_app.command("reset")
+def user_reset(
+    username: str = typer.Argument(...),
+    config: Path | None = ConfigOption,
+) -> None:
+    """Remove the password, end all sessions and print a new invite link."""
+    accounts = _accounts(config)
+    if accounts.directory.get(username) is None:
+        typer.echo(f"Unknown user: {username}", err=True)
+        raise typer.Exit(1)
+    typer.echo(accounts.reset_access(username))
+
+
+@user_app.command("list")
+def user_list(config: Path | None = ConfigOption) -> None:
+    """List users with role and access status."""
+    accounts = _accounts(config)
+    users = accounts.directory.all()
+    if not users:
+        typer.echo("No users.")
+        return
+    for username, user in sorted(users.items()):
+        books = "all" if user.workbooks is None else ",".join(user.workbooks)
+        status = accounts.status(username)
+        typer.echo(f"{username:<20} {user.role:<10} {status:<15} {books:<25} {user.name}")
+
+
+@app.command()
+def serve(config: Path | None = ConfigOption) -> None:
     """Run the web server (uvicorn) with the configured host and port."""
     import logging
 

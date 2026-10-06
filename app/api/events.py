@@ -9,8 +9,10 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
+
+from app.auth import get_current_user
 
 router = APIRouter()
 
@@ -92,7 +94,7 @@ async def event_stream(
         broadcaster.unsubscribe(queue)
 
 
-@router.get("/events")
+@router.get("/events", dependencies=[Depends(get_current_user)])
 async def events(request: Request) -> StreamingResponse:
     broadcaster: Broadcaster = request.app.state.broadcaster
     queue = broadcaster.subscribe()

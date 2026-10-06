@@ -7,6 +7,10 @@ topbar:
 
 nav:
   label: Schnellnavigation
+  user: Benutzer
+  users: Nutzer
+  catalogs: Kataloge
+  home: Zur Startseite
 
 day:
   label: "Tag {n}"
@@ -68,6 +72,51 @@ index:
   open: Öffnen
 
 admin:
+  users:
+    title: Nutzer
+    heading: Nutzerverwaltung
+    intro: Neue Nutzer erhalten einen Einladungslink, mit dem sie ihr Passwort selbst festlegen. Die Liste steht in users.yaml und kann dort auch von Hand bearbeitet werden.
+    file_error: "users.yaml ist fehlerhaft, es gilt der letzte gültige Stand: {message}"
+    empty: Noch keine Nutzer vorhanden.
+    username: Benutzername
+    username_placeholder: leer lassen für Vorschlag
+    name: Name
+    role: Rolle
+    role_trainer: Fachbetreuer
+    role_apprentice: Azubi
+    workbooks: Arbeitshefte
+    workbooks_hint: Nur für Azubis. Keine Auswahl bedeutet alle Hefte.
+    all_workbooks: alle
+    status: Status
+    status_active: Aktiv
+    status_invited: Eingeladen, noch kein Passwort
+    status_invite_expired: Einladung abgelaufen
+    status_no_access: Kein Zugang
+    status_inactive: Deaktiviert
+    actions: Aktionen
+    reset: Zugang zurücksetzen
+    deactivate: Deaktivieren
+    activate: Aktivieren
+    create_heading: Neuen Nutzer anlegen
+    create: Anlegen und Einladungslink erzeugen
+    invite_heading: Einladungslink
+    invite_text: "Link für {name} ({username}). Er ist nur einmal verwendbar und wird nicht erneut angezeigt."
+    copy: Kopieren
+    copied: Kopiert
+    nobody: niemand
+    supervisor_line: "{workbook}: Fachbetreuer {user}"
+    supervisor_tasks:
+      one: "(+ {count} Aufgabe abweichend)"
+      other: "(+ {count} Aufgaben abweichend)"
+    error_name: Bitte einen Namen angeben.
+    error_role: Ungültige Rolle.
+    error_username: "Ungültiger Benutzername: nur a–z, 0–9 und „-“, Beginn mit Buchstabe oder Ziffer."
+    error_exists: Diesen Benutzernamen gibt es bereits.
+    error_self: Du kannst dein eigenes Konto nicht deaktivieren.
+    warn_workbook: "Unbekanntes Heft „{workbook}“."
+    warn_task: "Unbekannte Aufgabe „{task}“ im Heft „{workbook}“."
+    warn_supervisor: "„{user}“ ist kein Fachbetreuer."
+    warn_trainer_supervisors: Fachbetreuer-Zuordnungen gelten nur für Azubis und werden hier ignoriert.
   catalogs:
     title: Kataloge
     heading: Geladene Kataloge
@@ -88,6 +137,11 @@ admin:
     never: —
 
 errors:
+  page_bad_request: Die Anfrage ist ungültig.
+  page_forbidden: Dafür fehlt dir die Berechtigung.
+  page_not_found: Diese Seite gibt es nicht.
+  page_generic: Da ist etwas schiefgegangen.
+  csrf: Die Sitzung ist abgelaufen oder die Anfrage kam von einer fremden Seite. Bitte lade die Seite neu und versuche es noch einmal.
   generic: "Ungültiger Wert ({message})"
   missing: Pflichtfeld fehlt.
   extra_forbidden: Unbekannter Schlüssel – Tippfehler?
@@ -130,3 +184,21 @@ errors:
     answer: Antwort-ID
     header field: Kopffeld-ID
     module code: Modulcode
+
+auth:
+  login_title: Anmelden
+  username: Benutzername
+  password: Passwort
+  login: Anmelden
+  logout: Abmelden
+  login_failed: Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.
+  invite_title: Zugang einrichten
+  invite_intro: "Hallo {name}! Lege hier dein Passwort fest. Dein Benutzername ist „{username}“."
+  invite_submit: Passwort speichern und anmelden
+  invite_invalid: Dieser Einladungslink ist ungültig oder abgelaufen. Bitte deinen Fachbetreuer um einen neuen Link.
+  new_password: Neues Passwort
+  password_repeat: Passwort wiederholen
+  password_rule: Mindestens 12 Zeichen. Ein Satz aus mehreren Wörtern ist leicht zu merken und sicher.
+  password_mismatch: Die beiden Passwörter stimmen nicht überein.
+  password_too_short: Das Passwort muss mindestens 12 Zeichen lang sein.
+  password_too_long: Das Passwort ist zu lang.

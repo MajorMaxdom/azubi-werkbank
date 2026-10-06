@@ -1,0 +1,114 @@
+{% extends "page.html" %}
+{% block title %}{{ t('admin.users.title') }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('admin.users.heading') }}</h1>
+<p class="page-intro">{{ t('admin.users.intro') }}</p>
+
+{% if users_error %}
+<p class="form-error" role="alert">{{ t('admin.users.file_error', message=users_error) }}</p>
+{% endif %}
+{% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+
+{% if invite %}
+<section class="panel invite-box" aria-live="polite">
+  <span class="micro-label">{{ t('admin.users.invite_heading') }}</span>
+  <p>{{ t('admin.users.invite_text', name=invite.name, username=invite.username) }}</p>
+  <div class="copy-row">
+    <input id="invite-link" type="text" class="mono-input" value="{{ invite.link }}" readonly>
+    <button type="button" class="button" data-copy="#invite-link" data-copied="{{ t('admin.users.copied') }}">{{ t('admin.users.copy') }}</button>
+  </div>
+</section>
+{% endif %}
+
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ t('admin.users.username') }}</th>
+        <th scope="col">{{ t('admin.users.name') }}</th>
+        <th scope="col">{{ t('admin.users.role') }}</th>
+        <th scope="col">{{ t('admin.users.workbooks') }}</th>
+        <th scope="col">{{ t('admin.users.status') }}</th>
+        <th scope="col">{{ t('admin.users.actions') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="mono">{{ row.username }}</td>
+        <td>{{ row.user.name }}</td>
+        <td>{{ t('admin.users.role_trainer') if row.user.role == 'trainer' else t('admin.users.role_apprentice') }}</td>
+        <td class="mono">
+          {% if row.user.role == 'trainer' or row.user.workbooks is none %}{{ t('admin.users.all_workbooks') }}{% else %}{{ row.user.workbooks | join(', ') }}{% endif %}
+          {% for wid, sup in row.user.supervisors.items() %}
+          <div class="supervision">{{ t('admin.users.supervisor_line', workbook=wid, user=sup.default or t('admin.users.nobody')) }}{% if sup.tasks %} {{ t('admin.users.supervisor_tasks', count=sup.tasks | length) }}{% endif %}</div>
+          {% endfor %}
+        </td>
+        <td><span class="status status-{{ row.status }}">{{ row.status_label }}</span></td>
+        <td class="actions">
+          <form method="post" action="/admin/users/{{ row.username }}/reset" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button button-quiet">{{ t('admin.users.reset') }}</button>
+          </form>
+          {% if row.user.active %}
+          {% if not identity or identity.username != row.username %}
+          <form method="post" action="/admin/users/{{ row.username }}/deactivate" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button button-quiet">{{ t('admin.users.deactivate') }}</button>
+          </form>
+          {% endif %}
+          {% else %}
+          <form method="post" action="/admin/users/{{ row.username }}/activate" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button button-quiet">{{ t('admin.users.activate') }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% if row.warnings %}
+      <tr class="row-detail">
+        <td colspan="6">
+          <ul class="issue-list">
+            {% for warning in row.warnings %}<li class="issue issue-warning"><span>{{ warning }}</span></li>{% endfor %}
+          </ul>
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="6" class="empty">{{ t('admin.users.empty') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<form method="post" action="/admin/users" class="panel form-stack create-user">
+  <h2 class="section-title">{{ t('admin.users.create_heading') }}</h2>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="field-grid">
+    <div class="field">
+      <label class="micro-label" for="new-name">{{ t('admin.users.name') }}</label>
+      <input id="new-name" name="name" type="text" value="{{ form.name }}" required>
+    </div>
+    <div class="field">
+      <label class="micro-label" for="new-username">{{ t('admin.users.username') }}</label>
+      <input id="new-username" name="username" type="text" value="{{ form.username }}" class="mono-input" autocapitalize="none" spellcheck="false" placeholder="{{ t('admin.users.username_placeholder') }}">
+    </div>
+  </div>
+  <fieldset class="field">
+    <legend class="micro-label">{{ t('admin.users.role') }}</legend>
+    <label class="option"><input type="radio" name="role" value="apprentice"{% if form.role != 'trainer' %} checked{% endif %}><span>{{ t('admin.users.role_apprentice') }}</span></label>
+    <label class="option"><input type="radio" name="role" value="trainer"{% if form.role == 'trainer' %} checked{% endif %}><span>{{ t('admin.users.role_trainer') }}</span></label>
+  </fieldset>
+  {% if catalogs %}
+  <fieldset class="field">
+    <legend class="micro-label">{{ t('admin.users.workbooks') }}</legend>
+    <p class="field-hint">{{ t('admin.users.workbooks_hint') }}</p>
+    {% for wid, cat in catalogs.items() %}
+    <label class="option"><input type="checkbox" name="workbooks" value="{{ wid }}"{% if wid in form.workbooks %} checked{% endif %}><span>{{ cat.workbook.title }} <span class="mono">({{ wid }})</span></span></label>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+  <button type="submit" class="button">{{ t('admin.users.create') }}</button>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/js/copy.js" defer></script>{% endblock %}

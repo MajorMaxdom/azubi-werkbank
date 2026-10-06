@@ -1,0 +1,13 @@
+{% if identity %}
+<nav class="user-menu" aria-label="{{ t('nav.user') }}">
+  {% if identity.is_trainer %}
+  <a href="/admin/users">{{ t('nav.users') }}</a>
+  <a href="/admin/catalogs">{{ t('nav.catalogs') }}</a>
+  {% endif %}
+  <span class="user-name">{{ identity.user.name }}</span>
+  <form method="post" action="/logout" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="topbar-button">{{ icon('log-out') }}<span>{{ t('auth.logout') }}</span></button>
+  </form>
+</nav>
+{% endif %}

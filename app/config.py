@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
 from ruamel.yaml import YAML
@@ -34,7 +35,15 @@ class Config(BaseModel):
     login_max_attempts: int = Field(5, ge=1)
     login_lockout_minutes: int = Field(15, ge=1)
     invite_valid_hours: int = Field(72, ge=1)
-    auth_mode: Literal["local"] = "local"
+    auth_mode: Literal["local"] = "local"  # reserved: "header" (Caddy forward_auth) later
+    # Secure cookies with the __Host- prefix. Only disable for plain-HTTP testing.
+    secure_cookies: bool = True
+
+    @property
+    def origin(self) -> str:
+        """Scheme, host and port of ``base_url`` (what browsers send as Origin)."""
+        parts = urlsplit(self.base_url)
+        return f"{parts.scheme}://{parts.netloc}"
 
     def resolve_paths(self, base: Path) -> Config:
         """Return a copy with relative paths resolved against ``base``."""

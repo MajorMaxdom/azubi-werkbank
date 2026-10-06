@@ -7,42 +7,28 @@ import time
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.api.admin import localize_error
 from app.api.events import Broadcaster, event_stream
-from app.config import Config, Paths, load_config
+from app.config import Config, load_config
 from app.i18n import get_translator
 from app.loader import CatalogError, Registry
-from app.main import create_app
 from app.models.catalog import Stylesheet
 from app.theme import contrast_ratio, contrast_warnings
-from tests.conftest import ROOT
+from tests.conftest import ROOT, add_user, make_config, open_client
 from tests.test_loader import VALID_YAML
-
-
-def make_config(tmp_path: Path) -> Config:
-    workbooks = tmp_path / "workbooks"
-    workbooks.mkdir(exist_ok=True)
-    return Config(
-        paths=Paths(
-            workbooks=workbooks,
-            progress=tmp_path / "progress",
-            users=tmp_path / "users.yaml",
-            data=tmp_path / "data",
-            locales=ROOT / "locales",
-        )
-    )
 
 
 @pytest.fixture
 def config(tmp_path):
-    return make_config(tmp_path)
+    config = make_config(tmp_path)
+    add_user(config, "boss", "trainer", name="Chefin Boss")
+    return config
 
 
 @pytest.fixture
 def client(config):
-    with TestClient(create_app(config, watch=False)) as c:
+    with open_client(config, "boss") as c:
         yield c
 
 
@@ -52,7 +38,7 @@ def write(config: Config, name: str, text: str) -> Path:
     return path
 
 
-def reload(client: TestClient) -> Registry:
+def reload(client) -> Registry:
     registry: Registry = client.app.state.registry
     registry.apply_changes(config_files(registry))
     return registry
@@ -68,7 +54,7 @@ def config_files(registry: Registry) -> set[Path]:
 
 def test_index_lists_workbooks(config):
     write(config, "a.yaml", VALID_YAML)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         html = client.get("/").text
     assert 'href="/workbooks/demo"' in html
     assert "1 Aufgabe" in html
@@ -80,7 +66,7 @@ def test_index_empty(client):
 
 def test_workbook_page(config):
     write(config, "a.yaml", VALID_YAML)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         response = client.get("/workbooks/demo")
     assert response.status_code == 200
     html = response.text
@@ -96,10 +82,10 @@ def test_unknown_workbook_404(client, path):
     assert client.get(path + "/theme.css").status_code == 404
 
 
-def test_network_security_page_renders_without_trainer_content(tmp_path):
-    config = make_config(tmp_path)
+def test_network_security_page_renders_without_trainer_content(config):
     shutil.copy(ROOT / "workbooks" / "network-security.yaml", config.paths.workbooks)
-    with TestClient(create_app(config, watch=False)) as client:
+    add_user(config, "azubi", "apprentice")
+    with open_client(config, "azubi") as client:
         html = client.get("/workbooks/network-security").text
     assert "Wie startet ein Linux-System?" in html
     assert "Bereich Fachbetreuer" not in html
@@ -117,7 +103,7 @@ def test_assets_served_and_traversal_blocked(config):
     assets.mkdir(parents=True)
     (assets / "a.png").write_bytes(b"\x89PNG\r\n")
     (config.paths.workbooks / "secret.yaml").write_text("x: 1")
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         assert client.get("/assets/demo/a.png").status_code == 200
         assert client.get("/assets/../secret.yaml").status_code == 404
         assert client.get("/assets/%2e%2e/secret.yaml").status_code == 404
@@ -132,7 +118,7 @@ def test_missing_assets_dir_is_404(client):
 
 def test_theme_css_empty_without_stylesheet(config):
     write(config, "a.yaml", VALID_YAML)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         response = client.get("/workbooks/demo/theme.css")
     assert response.status_code == 200
     assert response.text == ""
@@ -146,7 +132,7 @@ def test_theme_css_with_stylesheet_and_etag(config):
         "  title: Demo\n", '  title: Demo\n  stylesheet:\n    accent: "#0F4C3A"\n'
     )
     write(config, "a.yaml", text)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         response = client.get("/workbooks/demo/theme.css")
         assert response.text == ":root {\n  --accent: #0F4C3A;\n}\n"
         etag = response.headers["etag"]
@@ -164,7 +150,7 @@ def test_theme_css_with_stylesheet_and_etag(config):
 
 def test_theme_etag_changes_after_reload(config):
     path = write(config, "a.yaml", VALID_YAML)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         first = client.get("/workbooks/demo/theme.css").headers["etag"]
         path.write_text(
             VALID_YAML.replace("  title: Demo\n", '  title: Demo\n  stylesheet:\n    ink: "#000"\n')
@@ -282,7 +268,7 @@ def wait_for(predicate, timeout: float = 10.0) -> bool:
 
 def test_file_watcher_end_to_end(config):
     """Add, change, break and delete a file while the server runs (no restart)."""
-    with TestClient(create_app(config, watch=True)) as client:
+    with open_client(config, "boss", watch=True) as client:
         assert client.get("/workbooks/demo").status_code == 404
         time.sleep(0.3)  # let the watcher start
 
@@ -311,7 +297,7 @@ def test_file_watcher_end_to_end(config):
 def test_admin_catalogs_shows_errors_in_german(config):
     write(config, "good.yaml", VALID_YAML)
     write(config, "bad.yaml", VALID_YAML.replace("id: demo", "id: Demo_2"))
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         html = client.get("/admin/catalogs").text
     assert "good.yaml" in html and "bad.yaml" in html
     assert "<code>workbook.id</code>" in html
@@ -321,7 +307,7 @@ def test_admin_catalogs_shows_errors_in_german(config):
 
 def test_admin_catalogs_stale_status(config):
     path = write(config, "a.yaml", VALID_YAML)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         path.write_text(VALID_YAML.replace("level: understand", "level: expert"))
         reload(client)
         html = client.get("/admin/catalogs").text
@@ -334,7 +320,7 @@ def test_admin_catalogs_contrast_warning(config):
         "  title: Demo\n", '  title: Demo\n  stylesheet:\n    accent: "#DDDDDD"\n'
     )
     write(config, "a.yaml", text)
-    with TestClient(create_app(config, watch=False)) as client:
+    with open_client(config, "boss") as client:
         html = client.get("/admin/catalogs").text
     assert "Warnungen" in html
     assert "white auf --accent" in html

@@ -20,7 +20,7 @@
       <progress class="progress-bar" max="{{ wb.task_count }}" value="0" aria-label="{{ t('topbar.progress_label') }}"></progress>
       <span class="progress-text" data-progress-text>{{ t('topbar.progress', done=0, total=wb.task_count, percent=0) }}</span>
     </div>
-    {% block topbar_extra %}{% endblock %}
+    {% include "partials/user_menu.html" %}
   </header>
   <nav class="quicknav" aria-label="{{ t('nav.label') }}">
     {% for d in wb.days %}

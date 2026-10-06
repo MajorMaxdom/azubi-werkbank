@@ -4,13 +4,38 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-06
 
 ### Added
+- Login/logout with signed session cookies (`__Host-session`, HttpOnly,
+  Secure, SameSite=Strict), 8 h idle timeout with `last_seen` refresh at most
+  every 5 minutes; sessions end immediately on reset, deactivation or removal.
+- `users.yaml` model, hot reload and round-trip writes that keep comments;
+  `data/credentials.json` and `data/secret.key` (mode 0600, dir 0700) with
+  atomic writes under per-file locks shared by server and CLI.
+- argon2id passwords (min. 12 characters); identical German error for every
+  failed login; lockout after 5 failures per user for 15 minutes; in-memory
+  limit of 20 failures per IP in 15 minutes (X-Forwarded-For trusted only from
+  loopback); log line `auth.login_failed user=<name> ip=<ip>`.
+- Invites: 32 random bytes, only the SHA-256 stored, single use, valid 72 h.
+- `/admin/users`: create (username suggestion), reset access, deactivate,
+  activate, copy invite link; status per user; warnings for the Fachbetreuer
+  assignment (`supervisors` per apprentice workbook with per-task overrides).
+- CSRF protection for forms (same-origin `Origin` + token) and the helper for
+  the JSON API (`X-Workbook: 1`); German error pages.
+- CLI: `workbook user add | reset | list`.
+- Every page, theme, asset and the event stream requires login; `/admin/*`
+  requires the `trainer` role; apprentices only see their workbooks.
+
+### Changed
+- Config key `secure_cookies` (default `true`) for plain-HTTP testing.
+- Catalog images are served by `/assets/{path}` behind the login.
+
+### Added (between 0.2.0 and 0.3.0)
 - Answer option `monospace: true` (types `text` and `short`) for tables,
   protocols and command output.
 
-### Changed
+### Changed (between 0.2.0 and 0.3.0)
 - UI term "Ausbilder" is now "Fachbetreuer" (role value stays `trainer`).
 - `network-security` workbook 4.1.0: "Ausbilder" → "Fachbetreuer" in the
   content; header field "Ausbilder/in" removed.

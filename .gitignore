@@ -18,3 +18,4 @@ users.yaml
 *.deb
 files.zip
 *.html.out
+*.lock

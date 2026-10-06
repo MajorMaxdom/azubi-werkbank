@@ -1,0 +1,20 @@
+{% extends "page.html" %}
+{% block title %}{{ t('auth.login_title') }}{% endblock %}
+{% block sheet_class %}{{ 'sheet-narrow' }}{% endblock %}
+{% block content %}
+<form method="post" action="/login" class="panel form-stack">
+  <h1 class="page-title">{{ t('auth.login_title') }}</h1>
+  {% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="field">
+    <label class="micro-label" for="username">{{ t('auth.username') }}</label>
+    <input id="username" name="username" type="text" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+  </div>
+  <div class="field">
+    <label class="micro-label" for="password">{{ t('auth.password') }}</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button type="submit" class="button">{{ t('auth.login') }}</button>
+</form>
+{% endblock %}

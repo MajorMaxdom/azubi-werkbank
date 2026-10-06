@@ -210,6 +210,7 @@ Pages (German UI, English URLs):
   button), `POST /admin/users/{username}/reset`,
   `POST /admin/users/{username}/deactivate`, `POST /admin/users/{username}/activate`
 - `GET /admin/catalogs` — loaded catalogs, versions, validation errors
+- `GET /assets/{path}` — catalog images from `workbooks/assets/` (login required)
 
 JSON API (all require session + `X-Workbook: 1` + same `Origin`):
 - `PATCH /api/progress/{workbook_id}/header`
@@ -320,6 +321,7 @@ login_max_attempts: 5
 login_lockout_minutes: 15
 invite_valid_hours: 72
 auth_mode: local        # reserved: later "header" for forward_auth
+secure_cookies: true    # __Host- cookies with Secure flag; false only for plain-HTTP testing
 ```
 Provide `config.example.yaml`; `config.yaml` is git-ignored, as are
 `progress/`, `data/` and `users.yaml`.

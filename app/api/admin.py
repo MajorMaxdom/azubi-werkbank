@@ -1,18 +1,26 @@
-"""Trainer/admin pages. In 0.2.0 only /admin/catalogs exists (no auth yet;
-the app is bound to localhost)."""
+"""Admin pages for Fachbetreuer (role ``trainer``): catalogs and users."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from typing import Annotated
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.api.common import render
+from app.auth import Identity, is_valid_username, require_trainer, suggest_username, verify_form
 from app.i18n import Translator
 from app.loader import CatalogError, Entry
+from app.models.catalog import ID_PATTERN
+from app.models.users import User
 from app.theme import contrast_warnings
 
-router = APIRouter(prefix="/admin")
+router = APIRouter(prefix="/admin", dependencies=[Depends(require_trainer)])
+
+_ID_RE = re.compile(ID_PATTERN)
+Trainer = Annotated[Identity, Depends(require_trainer)]
 
 _PATTERN_FIELDS = {"id": "id", "duration": "duration", "version": "version"}
 
@@ -82,5 +90,159 @@ def build_rows(entries: list[Entry], t: Translator) -> list[CatalogRow]:
 @router.get("/catalogs", response_class=HTMLResponse)
 def catalogs(request: Request) -> HTMLResponse:
     rows = build_rows(request.app.state.registry.entries(), request.app.state.translator)
-    html = request.app.state.templates.get_template("admin_catalogs.html").render(rows=rows)
-    return HTMLResponse(html)
+    return render(request, "admin_catalogs.html", rows=rows)
+
+
+# --------------------------------------------------------------------------- users
+
+
+@dataclass
+class UserRow:
+    username: str
+    user: User
+    status: str
+    status_label: str
+    warnings: list[str]
+
+
+def supervisor_warnings(request: Request, username: str, user: User) -> list[str]:
+    """Problems in the Fachbetreuer assignment and workbook list (warnings only)."""
+    t = request.app.state.translator
+    users = request.app.state.users.all()
+    catalogs = request.app.state.registry.catalogs()
+    warnings: list[str] = []
+    for wid in user.workbooks or []:
+        if wid not in catalogs:
+            warnings.append(t("admin.users.warn_workbook", workbook=wid))
+    for wid, supervision in user.supervisors.items():
+        catalog = catalogs.get(wid)
+        if catalog is None:
+            warnings.append(t("admin.users.warn_workbook", workbook=wid))
+        task_ids = (
+            {task.id for day in catalog.days for module in day.modules for task in module.tasks}
+            if catalog
+            else set()
+        )
+        names = [supervision.default] if supervision.default else []
+        for task_id, name in supervision.tasks.items():
+            names.append(name)
+            if catalog is not None and task_id not in task_ids:
+                warnings.append(t("admin.users.warn_task", workbook=wid, task=task_id))
+        for name in names:
+            other = users.get(name)
+            if other is None or other.role != "trainer":
+                warnings.append(t("admin.users.warn_supervisor", user=name))
+    if user.role == "trainer" and user.supervisors:
+        warnings.append(t("admin.users.warn_trainer_supervisors"))
+    return warnings
+
+
+USER_STATUS_KEYS = {
+    "active": "admin.users.status_active",
+    "invited": "admin.users.status_invited",
+    "invite_expired": "admin.users.status_invite_expired",
+    "no_access": "admin.users.status_no_access",
+    "inactive": "admin.users.status_inactive",
+}
+
+
+def user_rows(request: Request) -> list[UserRow]:
+    accounts = request.app.state.accounts
+    t = request.app.state.translator
+    rows = []
+    for username, user in sorted(request.app.state.users.all().items()):
+        status = accounts.status(username)
+        rows.append(
+            UserRow(
+                username=username,
+                user=user,
+                status=status,
+                status_label=t(USER_STATUS_KEYS[status]),
+                warnings=supervisor_warnings(request, username, user),
+            )
+        )
+    return rows
+
+
+def page(request: Request, status_code: int = 200, **context) -> HTMLResponse:
+    defaults = {"form": {"name": "", "username": "", "role": "apprentice", "workbooks": []},
+                "error": None, "invite": None}  # fmt: skip
+    defaults.update(context)
+    return render(
+        request,
+        "admin_users.html",
+        status_code=status_code,
+        rows=user_rows(request),
+        users_error=request.app.state.users.error,
+        catalogs=request.app.state.registry.catalogs(),
+        **defaults,
+    )
+
+
+@router.get("/users", response_class=HTMLResponse)
+def list_users(request: Request) -> HTMLResponse:
+    return page(request)
+
+
+@router.post("/users", dependencies=[Depends(verify_form)], response_class=HTMLResponse)
+def create_user(
+    request: Request,
+    name: Annotated[str, Form(max_length=200)] = "",
+    username: Annotated[str, Form(max_length=200)] = "",
+    role: Annotated[str, Form(max_length=20)] = "apprentice",
+    workbooks: Annotated[list[str] | None, Form()] = None,
+) -> HTMLResponse:
+    name = name.strip()
+    username = username.strip().lower()
+    selected = [w for w in (workbooks or []) if _ID_RE.fullmatch(w)]
+    form = {"name": name, "username": username, "role": role, "workbooks": selected}
+    existing = request.app.state.users.all()
+    error = None
+    if not name:
+        error = "admin.users.error_name"
+    elif role not in ("trainer", "apprentice"):
+        error = "admin.users.error_role"
+    if not username and not error:
+        username = suggest_username(name, existing)
+    if not error and not is_valid_username(username):
+        error = "admin.users.error_username"
+    elif not error and username in existing:
+        error = "admin.users.error_exists"
+    if error:
+        return page(request, status_code=400, form=form, error=error)
+    link = request.app.state.accounts.create_user(
+        username, name, role, selected if role == "apprentice" and selected else None
+    )
+    return page(request, invite={"username": username, "name": name, "link": link})
+
+
+def _target(request: Request, username: str, identity: Identity) -> str:
+    if not is_valid_username(username) or request.app.state.users.get(username) is None:
+        raise HTTPException(status_code=404)
+    return username
+
+
+@router.post(
+    "/users/{username}/reset", dependencies=[Depends(verify_form)], response_class=HTMLResponse
+)
+def reset_user(request: Request, username: str, identity: Trainer) -> HTMLResponse:
+    username = _target(request, username, identity)
+    link = request.app.state.accounts.reset_access(username)
+    user = request.app.state.users.get(username)
+    return page(request, invite={"username": username, "name": user.name, "link": link})
+
+
+@router.post("/users/{username}/deactivate", dependencies=[Depends(verify_form)])
+def deactivate_user(request: Request, username: str, identity: Trainer):
+    username = _target(request, username, identity)
+    if username == identity.username:
+        return page(request, status_code=400, error="admin.users.error_self")
+    request.app.state.accounts.set_active(username, False)
+    return RedirectResponse("/admin/users", status_code=303)
+
+
+@router.post("/users/{username}/activate", dependencies=[Depends(verify_form)])
+def activate_user(request: Request, username: str, identity: Trainer) -> RedirectResponse:
+    username = _target(request, username, identity)
+    request.app.state.accounts.set_active(username, True)
+    return RedirectResponse("/admin/users", status_code=303)

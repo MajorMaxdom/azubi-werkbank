@@ -1,0 +1,22 @@
+{% extends "page.html" %}
+{% block title %}{{ t('auth.invite_title') }}{% endblock %}
+{% block sheet_class %}{{ 'sheet-narrow' }}{% endblock %}
+{% block content %}
+<form method="post" class="panel form-stack">
+  <h1 class="page-title">{{ t('auth.invite_title') }}</h1>
+  <p>{{ t('auth.invite_intro', name=user.name, username=username) }}</p>
+  {% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="text" name="username" value="{{ username }}" autocomplete="username" hidden>
+  <div class="field">
+    <label class="micro-label" for="password">{{ t('auth.new_password') }}</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required autofocus>
+    <p class="field-hint">{{ t('auth.password_rule') }}</p>
+  </div>
+  <div class="field">
+    <label class="micro-label" for="password_repeat">{{ t('auth.password_repeat') }}</label>
+    <input id="password_repeat" name="password_repeat" type="password" autocomplete="new-password" minlength="12" required>
+  </div>
+  <button type="submit" class="button">{{ t('auth.invite_submit') }}</button>
+</form>
+{% endblock %}
