@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -20,6 +21,7 @@ from app.editor import (
     MAX_ASSET_BYTES,
     AssetTooLarge,
     EditorConflict,
+    archive_catalog,
     asset_directory,
     asset_usage,
     clean,
@@ -70,7 +72,9 @@ def _errors(request: Request, errors: list[CatalogError]) -> list[dict[str, str]
 
 
 @router.get("/admin/editor", response_class=HTMLResponse)
-def editor_index(request: Request, error: str | None = None) -> HTMLResponse:
+def editor_index(
+    request: Request, error: str | None = None, deleted: str | None = None
+) -> HTMLResponse:
     registry = request.app.state.registry
     return render(
         request,
@@ -78,6 +82,7 @@ def editor_index(request: Request, error: str | None = None) -> HTMLResponse:
         entries=registry.entries(),
         catalogs=registry.catalogs(),
         error=error,
+        deleted=deleted if deleted and _ID_RE.fullmatch(deleted) else None,
         form={"title": "", "id": "", "source": ""},
     )
 
@@ -394,3 +399,72 @@ def cleanup_assets(request: Request, workbook_id: str) -> RedirectResponse:
     for asset in list_assets(directory):
         _delete_unused_asset(request, workbook_id, asset["name"])
     return RedirectResponse(f"/admin/editor/{workbook_id}/assets?done=cleaned", status_code=303)
+
+
+# --------------------------------------------------------------------------- delete a workbook
+
+
+def _delete_summary(request: Request, workbook_id: str, entry) -> dict[str, Any]:
+    users = request.app.state.users.all()
+    referenced = [
+        u.name
+        for u in users.values()
+        if (u.workbooks and workbook_id in u.workbooks) or workbook_id in u.supervisors
+    ]
+    images = list_assets(asset_directory(request.app.state.config.paths.workbooks, workbook_id))
+    return {
+        "file": entry.path.name,
+        "progress": request.app.state.progress.count_for_workbook(workbook_id),
+        "users": sorted(referenced, key=str.lower),
+        "images": len(images),
+    }
+
+
+@router.get("/admin/editor/{workbook_id}/delete", response_class=HTMLResponse)
+def delete_workbook_page(request: Request, workbook_id: str) -> HTMLResponse:
+    entry = _entry(request, workbook_id)
+    return render(
+        request,
+        "editor_delete.html",
+        workbook_id=workbook_id,
+        entry=entry,
+        summary=_delete_summary(request, workbook_id, entry),
+        error=None,
+    )
+
+
+@router.post("/admin/editor/{workbook_id}/delete", dependencies=[Depends(verify_form)])
+def delete_workbook(
+    request: Request,
+    workbook_id: str,
+    identity: Trainer,
+    confirm: Annotated[str, Form(max_length=100)] = "",
+    delete_progress: Annotated[str, Form(max_length=5)] = "",
+    delete_assets: Annotated[str, Form(max_length=5)] = "",
+):
+    entry = _entry(request, workbook_id)
+    if confirm.strip() != workbook_id:
+        return render(
+            request,
+            "editor_delete.html",
+            status_code=400,
+            workbook_id=workbook_id,
+            entry=entry,
+            summary=_delete_summary(request, workbook_id, entry),
+            error="editor_delete.error_confirm",
+        )
+    state = request.app.state
+    archived = archive_catalog(entry.path)
+    state.registry.apply_changes({entry.path})
+    changed_users = state.users.forget_workbook(workbook_id)
+    progress = state.progress.delete_workbook(workbook_id) if delete_progress else 0
+    images = 0
+    if delete_assets:
+        directory = asset_directory(state.config.paths.workbooks, workbook_id)
+        images = len(list_assets(directory))
+        shutil.rmtree(directory, ignore_errors=True)
+    log.info(
+        "editor.workbook_deleted workbook=%s by=%s archived=%s users=%d progress=%d images=%d",
+        workbook_id, identity.username, archived.name, len(changed_users), progress, images,
+    )  # fmt: skip
+    return RedirectResponse(f"/admin/editor?deleted={workbook_id}", status_code=303)

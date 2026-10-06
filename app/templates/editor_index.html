@@ -4,6 +4,7 @@
 <h1 class="page-title">{{ t('editor.title') }}</h1>
 <p class="page-intro">{{ t('editor.intro') }}</p>
 {% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+{% if deleted %}<p class="form-success" role="status">{{ t('editor_delete.done', id=deleted) }}</p>{% endif %}
 <div class="table-wrap">
   <table class="data-table">
     <thead>
@@ -24,6 +25,7 @@
           {% if entry.catalog and not entry.conflict %}
           <a class="button button-quiet" href="/admin/editor/{{ entry.catalog.workbook.id }}">{{ t('editor.edit') }}</a>
           <a class="button button-quiet" href="/admin/editor/{{ entry.catalog.workbook.id }}/assets">{{ t('assets_page.link') }}</a>
+          <a class="button button-quiet" href="/admin/editor/{{ entry.catalog.workbook.id }}/delete">{{ t('editor_delete.button') }}</a>
           {% if entry.errors %}<span class="field-hint">{{ t('editor.has_errors') }}</span>{% endif %}
           {% else %}
           <span class="field-hint">{{ t('editor.not_editable') }}</span>

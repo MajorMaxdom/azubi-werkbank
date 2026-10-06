@@ -188,6 +188,7 @@ admin:
     workbooks: Arbeitshefte
     workbooks_hint: Nur für Azubis. Keine Auswahl bedeutet alle Hefte.
     all_workbooks: alle
+    no_workbooks: keine
     status: Status
     status_active: Aktiv
     status_invited: Eingeladen, noch kein Passwort
@@ -643,3 +644,32 @@ assets_page:
   cleaned: Alle ungenutzten Bilder wurden gelöscht.
   in_use: Das Bild wird inzwischen verwendet und wurde nicht gelöscht.
   empty: Zu diesem Heft gibt es noch keine Bilder. Hochladen geht im Editor im Bild-Block.
+
+editor_delete:
+  button: Löschen …
+  title: "Heft löschen: {title}"
+  intro: "Das Heft verschwindet sofort für alle Nutzer. Betroffen ist:"
+  item_file: "Katalogdatei {file} – wird nach workbooks/_backups/deleted/ verschoben und kann von dort zurückkopiert werden. Zuordnungen zu Azubis und Fachbetreuern müssen danach neu gesetzt werden."
+  item_progress:
+    one: "{count} Azubi hat bereits Antworten in diesem Heft."
+    other: "{count} Azubis haben bereits Antworten in diesem Heft."
+  item_no_progress: Noch niemand hat Antworten in diesem Heft gespeichert.
+  item_users:
+    one: "Zuordnung wird bei {count} Nutzer entfernt:"
+    other: "Zuordnungen werden bei {count} Nutzern entfernt:"
+  item_no_users: Kein Nutzer ist diesem Heft ausdrücklich zugeordnet.
+  item_images:
+    one: "{count} Bild gehört zu diesem Heft."
+    other: "{count} Bilder gehören zu diesem Heft."
+  item_no_images: Zu diesem Heft gibt es keine Bilder.
+  delete_progress:
+    one: "Auch die Antworten dieses Azubis endgültig löschen"
+    other: "Auch die Antworten aller {count} Azubis endgültig löschen"
+  delete_assets:
+    one: "Auch das Bild löschen"
+    other: "Auch alle {count} Bilder löschen"
+  keep_hint: Ohne Häkchen bleiben Antworten und Bilder erhalten. Sie tauchen wieder auf, wenn das Heft mit derselben ID wiederhergestellt wird, und sind im Datenexport der Azubis enthalten.
+  confirm_label: "Zur Bestätigung die Heft-ID „{id}“ eintippen"
+  submit: Heft endgültig löschen
+  error_confirm: Die eingetippte Heft-ID stimmt nicht. Es wurde nichts gelöscht.
+  done: "Das Heft „{id}“ wurde gelöscht. Die Katalogdatei liegt in workbooks/_backups/deleted/."

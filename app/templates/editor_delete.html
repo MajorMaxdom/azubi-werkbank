@@ -1,0 +1,32 @@
+{% extends "page.html" %}
+{% block title %}{{ t('editor_delete.title', title=entry.catalog.workbook.title) }}{% endblock %}
+{% block sheet_class %}{{ 'sheet-narrow-wide' }}{% endblock %}
+{% block content %}
+<p><a href="/admin/editor">{{ t('editor.back') }}</a></p>
+<h1 class="page-title">{{ t('editor_delete.title', title=entry.catalog.workbook.title) }}</h1>
+{% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+<section class="panel form-stack">
+  <p>{{ t('editor_delete.intro') }}</p>
+  <ul class="delete-summary">
+    <li>{{ t('editor_delete.item_file', file=summary.file) }}</li>
+    <li>{{ t('editor_delete.item_progress', count=summary.progress) if summary.progress else t('editor_delete.item_no_progress') }}</li>
+    <li>{% if summary.users %}{{ t('editor_delete.item_users', count=summary.users | length) }} {{ summary.users | join(', ') }}{% else %}{{ t('editor_delete.item_no_users') }}{% endif %}</li>
+    <li>{{ t('editor_delete.item_images', count=summary.images) if summary.images else t('editor_delete.item_no_images') }}</li>
+  </ul>
+  <form method="post" action="/admin/editor/{{ workbook_id }}/delete" class="form-stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if summary.progress %}
+    <label class="option"><input type="checkbox" name="delete_progress" value="1"><span>{{ t('editor_delete.delete_progress', count=summary.progress) }}</span></label>
+    {% endif %}
+    {% if summary.images %}
+    <label class="option"><input type="checkbox" name="delete_assets" value="1"><span>{{ t('editor_delete.delete_assets', count=summary.images) }}</span></label>
+    {% endif %}
+    <p class="field-hint">{{ t('editor_delete.keep_hint') }}</p>
+    <div class="field">
+      <label class="micro-label" for="confirm">{{ t('editor_delete.confirm_label', id=workbook_id) }}</label>
+      <input id="confirm" name="confirm" type="text" class="mono-input" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+    </div>
+    <button type="submit" class="button button-danger">{{ t('editor_delete.submit') }}</button>
+  </form>
+</section>
+{% endblock %}

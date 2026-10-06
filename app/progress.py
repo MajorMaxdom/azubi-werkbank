@@ -7,6 +7,7 @@ are used in a path.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import re
@@ -91,6 +92,32 @@ class ProgressStore:
         if files:
             log.info("progress.deleted user=%s files=%d", username, len(files))
         return len(files)
+
+    def count_for_workbook(self, workbook_id: str) -> int:
+        """Number of users with a progress file for ``workbook_id``."""
+        if not _ID_RE.fullmatch(workbook_id):
+            raise ValueError("invalid id in progress path")
+        directory = self.root / workbook_id
+        return len(list(directory.glob("*.json"))) if directory.is_dir() else 0
+
+    def delete_workbook(self, workbook_id: str) -> int:
+        """Delete every progress file of ``workbook_id`` (all users)."""
+        if not _ID_RE.fullmatch(workbook_id):
+            raise ValueError("invalid id in progress path")
+        directory = self.root / workbook_id
+        if not directory.is_dir():
+            return 0
+        count = 0
+        for path in directory.glob("*.json"):
+            with locked(path):
+                path.unlink(missing_ok=True)
+            count += 1
+        for lock in directory.glob("*.lock"):
+            lock.unlink(missing_ok=True)
+        with contextlib.suppress(OSError):
+            directory.rmdir()
+        log.info("progress.workbook_deleted workbook=%s files=%d", workbook_id, count)
+        return count
 
     def update(
         self, catalog: Catalog, username: str, change: Callable[[Progress], None]

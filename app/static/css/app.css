@@ -1177,6 +1177,12 @@ details.thread:not(.has-comments) > summary { color: var(--muted); }
 .asset-usage { margin: 0; padding-left: 18px; font-size: 13.5px; }
 .assets-table td { vertical-align: middle; }
 
+/* ---------------------------------------------------------------- delete workbook */
+
+.sheet-narrow-wide { max-width: 680px; }
+.delete-summary { margin: 0; padding-left: 20px; }
+.delete-summary li { margin-bottom: 6px; }
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 600px) {

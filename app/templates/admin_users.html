@@ -41,7 +41,7 @@
         <td>{{ row.user.name }}</td>
         <td>{{ t('admin.users.role_trainer') if row.user.role == 'trainer' else t('admin.users.role_apprentice') }}</td>
         <td class="mono">
-          {% if row.user.role == 'trainer' or row.user.workbooks is none %}{{ t('admin.users.all_workbooks') }}{% else %}{{ row.user.workbooks | join(', ') }}{% endif %}
+          {% if row.user.role == 'trainer' or row.user.workbooks is none %}{{ t('admin.users.all_workbooks') }}{% else %}{{ row.user.workbooks | join(', ') or t('admin.users.no_workbooks') }}{% endif %}
           {% for wid, sup in row.user.supervisors.items() %}
           <div class="supervision">{{ t('admin.users.supervisor_line', workbook=wid, user=sup.default or t('admin.users.nobody')) }}{% if sup.tasks %} {{ t('admin.users.supervisor_tasks', count=sup.tasks | length) }}{% endif %}</div>
           {% endfor %}

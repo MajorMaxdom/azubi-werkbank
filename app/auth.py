@@ -204,6 +204,36 @@ class UserDirectory:
         self._modify(change)
         return removed
 
+    def forget_workbook(self, workbook_id: str) -> list[str]:
+        """Remove ``workbook_id`` from every user's ``workbooks`` list and
+        ``supervisors``. Returns the usernames that changed.
+
+        A ``workbooks`` list that becomes empty stays as ``[]`` (no workbook);
+        dropping the key would mean "all workbooks".
+        """
+        changed: list[str] = []
+
+        def change(users: CommentedMap) -> None:
+            for username, entry in users.items():
+                if not isinstance(entry, CommentedMap):
+                    continue
+                touched = False
+                books = entry.get("workbooks")
+                if isinstance(books, list) and workbook_id in books:
+                    books.remove(workbook_id)
+                    touched = True
+                supervisors = entry.get("supervisors")
+                if isinstance(supervisors, CommentedMap) and workbook_id in supervisors:
+                    del supervisors[workbook_id]
+                    if not supervisors:
+                        del entry["supervisors"]
+                    touched = True
+                if touched:
+                    changed.append(username)
+
+        self._modify(change)
+        return changed
+
     def assign_supervisors(
         self,
         workbook_id: str,

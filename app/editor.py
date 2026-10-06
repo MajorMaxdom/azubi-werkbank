@@ -284,6 +284,25 @@ def save(path: Path, data: dict, base_hash: str | None, header: str = "") -> str
         return text_hash(text)
 
 
+DELETED_DIR = "deleted"  # workbooks/_backups/deleted/: catalogs removed in the editor
+
+
+def archive_catalog(path: Path) -> Path:
+    """Move a catalog file out of ``workbooks/`` into ``_backups/deleted/``.
+
+    The file is not destroyed, so a deleted workbook can be restored by moving
+    it back. Returns the new location.
+    """
+    directory = path.parent / BACKUP_DIR / DELETED_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    target = directory / f"{path.stem}.{stamp}{path.suffix}"
+    with locked(path):
+        os.replace(path, target)
+    path.with_name(path.name + ".lock").unlink(missing_ok=True)
+    return target
+
+
 def backup(path: Path) -> Path:
     directory = path.parent / BACKUP_DIR
     directory.mkdir(exist_ok=True)
