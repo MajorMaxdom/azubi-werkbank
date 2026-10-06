@@ -113,6 +113,23 @@ admin:
     error_username: "Ungültiger Benutzername: nur a–z, 0–9 und „-“, Beginn mit Buchstabe oder Ziffer."
     error_exists: Diesen Benutzernamen gibt es bereits.
     error_self: Du kannst dein eigenes Konto nicht deaktivieren.
+    error_supervisor: Als Fachbetreuer können nur Nutzer mit der Rolle Fachbetreuer eingetragen werden.
+    edit: Bearbeiten
+    edit_title: "Azubi bearbeiten: {name}"
+    edit_intro: Lege fest, welche Arbeitshefte der Azubi bearbeitet und wer sie kontrolliert. Einzelne Aufgaben können einen anderen Fachbetreuer haben.
+    back: Zurück zur Nutzerliste
+    save: Speichern
+    saved: Gespeichert.
+    assigned: Diesem Azubi zugewiesen
+    workbook_supervisor: Fachbetreuer für dieses Heft
+    no_supervisor: — niemand —
+    task_overrides: Abweichende Fachbetreuer für einzelne Aufgaben
+    task_overrides_count:
+      one: "{count} Aufgabe weicht ab"
+      other: "{count} Aufgaben weichen ab"
+    same_as_workbook: — wie Heft —
+    unknown_trainer: "{user} (kein Fachbetreuer)"
+    no_catalogs: Es sind noch keine Arbeitshefte geladen.
     warn_workbook: "Unbekanntes Heft „{workbook}“."
     warn_task: "Unbekannte Aufgabe „{task}“ im Heft „{workbook}“."
     warn_supervisor: "„{user}“ ist kein Fachbetreuer."

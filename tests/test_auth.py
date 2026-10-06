@@ -625,3 +625,88 @@ def test_cli_user_commands(tmp_path, monkeypatch):
     assert reset.exit_code == 0 and "/invite/" in reset.output
     assert added.output.strip().splitlines()[-1] != reset.output.strip()
     assert runner.invoke(cli_app, ["user", "reset", "ghost", "-c", str(cfg)]).exit_code == 1
+
+
+# ------------------------------------------------------------------ edit apprentice
+
+
+def test_edit_apprentice_assignment(config):
+    add_user(config, "kschulz", "trainer", name="Kai Schulz")
+    (config.paths.workbooks / "other.yaml").write_text(
+        VALID_YAML.replace("id: demo", "id: other"), encoding="utf-8"
+    )
+    original = config.paths.users.read_text()
+    config.paths.users.write_text("# keep me\n" + original, encoding="utf-8")
+    with open_client(config, "boss") as client:
+        page = client.get("/admin/users/azubi")
+        assert page.status_code == 200
+        assert 'name="supervisor:demo"' in page.text and 'name="task:demo:t1"' in page.text
+        response = post_form(
+            client,
+            "/admin/users/azubi",
+            {
+                "name": "Max Azubi-Neu",
+                "workbooks": ["demo"],
+                "supervisor:demo": "boss",
+                "task:demo:t1": "kschulz",
+                "supervisor:other": "kschulz",  # not allowed -> ignored
+            },
+            page="/admin/users/azubi",
+        )
+        assert response.status_code == 200 and "Gespeichert." in response.text
+        user = client.app.state.users.get("azubi")
+    assert user.name == "Max Azubi-Neu"
+    assert user.workbooks == ["demo"]
+    assert user.supervisor_for("demo", "t1") == "kschulz"
+    assert "other" not in user.supervisors
+    text = config.paths.users.read_text()
+    assert text.startswith("# keep me\n")
+    assert (
+        "supervisors:\n      demo:\n        default: boss\n        tasks:\n          t1: kschulz"
+        in text
+    )
+
+
+def test_edit_apprentice_override_equal_to_default_is_dropped(config):
+    with open_client(config, "boss") as client:
+        post_form(
+            client,
+            "/admin/users/azubi",
+            {"name": "Max", "supervisor:demo": "boss", "task:demo:t1": "boss"},
+            page="/admin/users/azubi",
+        )
+        user = client.app.state.users.get("azubi")
+    assert user.workbooks is None  # no selection = all workbooks
+    assert user.supervisors["demo"].default == "boss"
+    assert user.supervisors["demo"].tasks == {}
+
+
+def test_edit_apprentice_clear_assignment(config):
+    with open_client(config, "boss") as client:
+        post_form(client, "/admin/users/azubi", {"name": "Max", "supervisor:demo": "boss"},
+                  page="/admin/users/azubi")  # fmt: skip
+        post_form(client, "/admin/users/azubi", {"name": "Max", "supervisor:demo": ""},
+                  page="/admin/users/azubi")  # fmt: skip
+    assert "supervisors" not in config.paths.users.read_text()
+
+
+def test_edit_apprentice_rejects_non_trainer_supervisor(config):
+    with open_client(config, "boss") as client:
+        response = post_form(
+            client, "/admin/users/azubi", {"name": "Max", "supervisor:demo": "azubi"},
+            page="/admin/users/azubi",
+        )  # fmt: skip
+        assert response.status_code == 400
+        assert "Rolle Fachbetreuer" in response.text
+        assert client.app.state.users.get("azubi").supervisors == {}
+
+
+def test_edit_page_only_for_apprentices_and_trainers(config):
+    with open_client(config, "boss") as client:
+        assert client.get("/admin/users/boss").status_code == 404
+        assert client.get("/admin/users/ghost").status_code == 404
+        assert client.get("/admin/users/..").status_code == 404
+    with open_client(config, "azubi") as client:
+        assert client.get("/admin/users/azubi").status_code == 403
+        response = client.post("/admin/users/azubi", data={"name": "Hack"}, headers=ORIGIN)
+        assert response.status_code == 403

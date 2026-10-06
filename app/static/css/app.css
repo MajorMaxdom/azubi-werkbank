@@ -704,6 +704,27 @@ input[type="password"]:focus-visible { outline: 2px solid var(--accent); outline
 .button-quiet:hover { color: var(--card); }
 
 .invite-box { margin-bottom: 24px; border-top-color: var(--ok); }
+.form-success {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 8%, white);
+  border-left: 3px solid var(--ok);
+  border-radius: var(--radius);
+}
+a.button { display: inline-block; text-decoration: none; }
+a.button-quiet:hover { color: var(--card); }
+.data-table .actions a + form { margin-left: 4px; }
+.static-value { margin: 0; padding: 9px 0; }
+.assign-box { display: grid; gap: 14px; margin: 0; }
+.assign-head { font-size: 15px; }
+.assign-box select { max-width: 420px; }
+details.overrides { border: 1px solid var(--line); border-radius: var(--radius); }
+details.overrides > summary { color: var(--muted); }
+details.overrides .table-wrap { margin: 0; padding: 0 12px 12px; }
+.override-table td { vertical-align: middle; }
+.override-table td:first-child { width: 4em; }
+.override-table select { width: 100%; min-width: 200px; padding: 5px 8px; font-size: 13.5px; }
 .invite-box p { margin: 6px 0 12px; }
 .copy-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .copy-row input { flex: 1 1 280px; width: auto; }

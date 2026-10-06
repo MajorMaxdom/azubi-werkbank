@@ -136,6 +136,51 @@ class UserDirectory:
 
         self._modify(change)
 
+    def update_apprentice(
+        self,
+        username: str,
+        *,
+        name: str,
+        workbooks: list[str] | None,
+        supervisors: dict[str, tuple[str | None, dict[str, str]]],
+        managed: Iterable[str],
+    ) -> None:
+        """Update name, workbook list and Fachbetreuer assignment of an apprentice.
+
+        Only the workbooks in ``managed`` are rewritten in ``supervisors``; entries
+        for other workbooks (e.g. a catalog that is currently missing) are kept.
+        """
+
+        def change(users: CommentedMap) -> None:
+            if username not in users:
+                raise KeyError(username)
+            entry = users[username]
+            entry["name"] = name
+            if workbooks:
+                seq = CommentedSeq(workbooks)
+                seq.fa.set_flow_style()
+                entry["workbooks"] = seq
+            else:
+                entry.pop("workbooks", None)
+            current = entry.get("supervisors") or CommentedMap()
+            for wid in managed:
+                default, tasks = supervisors.get(wid, (None, {}))
+                if not default and not tasks:
+                    current.pop(wid, None)
+                    continue
+                block = CommentedMap()
+                if default:
+                    block["default"] = default
+                if tasks:
+                    block["tasks"] = CommentedMap(tasks)
+                current[wid] = block
+            if current:
+                entry["supervisors"] = current
+            else:
+                entry.pop("supervisors", None)
+
+        self._modify(change)
+
     def _modify(self, change: Callable[[CommentedMap], None]) -> None:
         yaml = YAML()
         yaml.preserve_quotes = True

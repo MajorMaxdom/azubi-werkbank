@@ -1,0 +1,83 @@
+{% extends "page.html" %}
+{% block title %}{{ t('admin.users.edit_title', name=user.name) }}{% endblock %}
+{% macro trainer_options(current, empty_label) %}
+<option value="">{{ empty_label }}</option>
+{% set ns = namespace(found=false) %}
+{% for name, trainer in trainers %}
+{% if name == current %}{% set ns.found = true %}{% endif %}
+<option value="{{ name }}"{% if name == current %} selected{% endif %}>{{ trainer.name }} ({{ name }})</option>
+{% endfor %}
+{% if current and not ns.found %}<option value="{{ current }}" selected>{{ t('admin.users.unknown_trainer', user=current) }}</option>{% endif %}
+{% endmacro %}
+{% block content %}
+<p><a href="/admin/users">{{ t('admin.users.back') }}</a></p>
+<h1 class="page-title">{{ t('admin.users.edit_title', name=user.name) }}</h1>
+<p class="page-intro">{{ t('admin.users.edit_intro') }}</p>
+{% if saved %}<p class="form-success" role="status">{{ t('admin.users.saved') }}</p>{% endif %}
+{% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+
+<form method="post" action="/admin/users/{{ username }}" class="form-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="panel form-stack">
+    <div class="field-grid">
+      <div class="field">
+        <label class="micro-label" for="edit-name">{{ t('admin.users.name') }}</label>
+        <input id="edit-name" name="name" type="text" value="{{ user.name }}" required>
+      </div>
+      <div class="field">
+        <span class="micro-label">{{ t('admin.users.username') }}</span>
+        <p class="mono static-value">{{ username }}</p>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">{{ t('admin.users.workbooks') }}</h2>
+  <p class="field-hint">{{ t('admin.users.workbooks_hint') }}</p>
+  {% for wb in views %}
+  {% set wid = wb.meta.id %}
+  {% set sup = user.supervisors.get(wid) %}
+  {% set overrides = sup.tasks if sup else {} %}
+  <fieldset class="panel assign-box">
+    <legend class="visually-hidden">{{ wb.meta.title }}</legend>
+    <label class="option assign-head">
+      <input type="checkbox" name="workbooks" value="{{ wid }}"{% if user.workbooks and wid in user.workbooks %} checked{% endif %}>
+      <span><strong>{{ wb.meta.title }}</strong> <span class="mono">({{ wid }})</span></span>
+    </label>
+    <div class="field">
+      <label class="micro-label" for="sup-{{ wid }}">{{ t('admin.users.workbook_supervisor') }}</label>
+      <select id="sup-{{ wid }}" name="supervisor:{{ wid }}">
+        {{ trainer_options(sup.default if sup else none, t('admin.users.no_supervisor')) }}
+      </select>
+    </div>
+    <details class="overrides"{% if overrides %} open{% endif %}>
+      <summary>{{ icon('chevron-right') }}<span>{{ t('admin.users.task_overrides') }}{% if overrides %} · {{ t('admin.users.task_overrides_count', count=overrides | length) }}{% endif %}</span></summary>
+      <div class="table-wrap">
+        <table class="data-table override-table">
+          <tbody>
+            {% for d in wb.days %}
+            {% for m in d.modules %}
+            <tr class="row-detail"><th colspan="3" scope="colgroup">{{ m.module.code }} · {{ m.module.title }}</th></tr>
+            {% for tv in m.tasks %}
+            <tr>
+              <td class="mono">{{ tv.number }}</td>
+              <td><label for="task-{{ wid }}-{{ tv.task.id }}">{{ tv.task.title }}</label></td>
+              <td>
+                <select id="task-{{ wid }}-{{ tv.task.id }}" name="task:{{ wid }}:{{ tv.task.id }}">
+                  {{ trainer_options(overrides.get(tv.task.id), t('admin.users.same_as_workbook')) }}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </fieldset>
+  {% else %}
+  <p class="empty">{{ t('admin.users.no_catalogs') }}</p>
+  {% endfor %}
+  <button type="submit" class="button">{{ t('admin.users.save') }}</button>
+</form>
+{% endblock %}

@@ -208,7 +208,9 @@ Pages (German UI, English URLs):
   dates, review status), links to review view
 - `GET /admin/users`, `POST /admin/users` (create → shows invite link with copy
   button), `POST /admin/users/{username}/reset`,
-  `POST /admin/users/{username}/deactivate`, `POST /admin/users/{username}/activate`
+  `POST /admin/users/{username}/deactivate`, `POST /admin/users/{username}/activate`,
+  `GET|POST /admin/users/{username}` (apprentice: name, workbooks, Fachbetreuer
+  per workbook and per task)
 - `GET /admin/catalogs` — loaded catalogs, versions, validation errors
 - `GET /assets/{path}` — catalog images from `workbooks/assets/` (login required)
 

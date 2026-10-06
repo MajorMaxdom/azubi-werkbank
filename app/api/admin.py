@@ -246,3 +246,101 @@ def activate_user(request: Request, username: str, identity: Trainer) -> Redirec
     username = _target(request, username, identity)
     request.app.state.accounts.set_active(username, True)
     return RedirectResponse("/admin/users", status_code=303)
+
+
+# --------------------------------------------------------------------------- edit apprentice
+
+
+def _trainers(request: Request) -> list[tuple[str, User]]:
+    users = request.app.state.users.all()
+    return sorted(
+        ((name, u) for name, u in users.items() if u.role == "trainer"),
+        key=lambda item: item[1].name.lower(),
+    )
+
+
+def edit_page(
+    request: Request, username: str, user: User, status_code: int = 200, **context
+) -> HTMLResponse:
+    registry = request.app.state.registry
+    views = [registry.view(wid) for wid in registry.catalogs()]
+    return render(
+        request,
+        "admin_user_edit.html",
+        status_code=status_code,
+        username=username,
+        user=user,
+        views=[v for v in views if v is not None],
+        trainers=_trainers(request),
+        error=context.get("error"),
+        saved=context.get("saved", False),
+    )
+
+
+def _apprentice(request: Request, username: str) -> User:
+    if not is_valid_username(username):
+        raise HTTPException(status_code=404)
+    user = request.app.state.users.get(username)
+    if user is None:
+        raise HTTPException(status_code=404)
+    return user
+
+
+@router.get("/users/{username}", response_class=HTMLResponse)
+def edit_user(request: Request, username: str) -> HTMLResponse:
+    user = _apprentice(request, username)
+    if user.role != "apprentice":
+        raise HTTPException(status_code=404)
+    return edit_page(request, username, user)
+
+
+@router.post("/users/{username}", dependencies=[Depends(verify_form)], response_class=HTMLResponse)
+async def save_user(request: Request, username: str) -> HTMLResponse:
+    user = _apprentice(request, username)
+    if user.role != "apprentice":
+        raise HTTPException(status_code=404)
+    form = await request.form()
+    catalogs = request.app.state.registry.catalogs()
+    trainers = {name for name, _ in _trainers(request)}
+
+    name = str(form.get("name", "")).strip()[:200]
+    if not name:
+        return edit_page(request, username, user, status_code=400, error="admin.users.error_name")
+
+    selected = [w for w in form.getlist("workbooks") if isinstance(w, str) and w in catalogs]
+    allowed = selected or list(catalogs)  # no selection = all workbooks
+
+    supervisors: dict[str, tuple[str | None, dict[str, str]]] = {}
+    for wid in allowed:
+        catalog = catalogs[wid]
+        default = str(form.get(f"supervisor:{wid}", "") or "")
+        if default and default not in trainers:
+            return edit_page(
+                request, username, user, status_code=400, error="admin.users.error_supervisor"
+            )
+        tasks: dict[str, str] = {}
+        for day in catalog.days:
+            for module in day.modules:
+                for task in module.tasks:
+                    value = str(form.get(f"task:{wid}:{task.id}", "") or "")
+                    if not value or value == default:
+                        continue
+                    if value not in trainers:
+                        return edit_page(
+                            request,
+                            username,
+                            user,
+                            status_code=400,
+                            error="admin.users.error_supervisor",
+                        )
+                    tasks[task.id] = value
+        supervisors[wid] = (default or None, tasks)
+
+    request.app.state.users.update_apprentice(
+        username,
+        name=name,
+        workbooks=selected or None,
+        supervisors=supervisors,
+        managed=list(catalogs),
+    )
+    return edit_page(request, username, request.app.state.users.get(username), saved=True)
