@@ -23,7 +23,7 @@
         <td>{% if cat %}<span class="mono">{{ cat.workbook.id }}</span><br>{{ cat.workbook.title }}{% else %}{{ t('admin.catalogs.never') }}{% endif %}</td>
         <td class="mono">{{ cat.workbook.version if cat else t('admin.catalogs.never') }}</td>
         <td><span class="status status-{{ row.status }}">{{ row.status_label }}</span></td>
-        <td class="mono">{{ row.entry.loaded_at.astimezone().strftime('%d.%m.%Y %H:%M:%S') if row.entry.loaded_at else t('admin.catalogs.never') }}</td>
+        <td class="mono">{{ row.entry.loaded_at | de_datetime(true) if row.entry.loaded_at else t('admin.catalogs.never') }}</td>
       </tr>
       {% if row.errors or row.warnings %}
       <tr class="row-detail">

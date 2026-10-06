@@ -6,8 +6,9 @@ import os
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ruamel.yaml import YAML
 
 CONFIG_ENV = "WORKBOOK_CONFIG"
@@ -38,6 +39,17 @@ class Config(BaseModel):
     auth_mode: Literal["local"] = "local"  # reserved: "header" (Caddy forward_auth) later
     # Secure cookies with the __Host- prefix. Only disable for plain-HTTP testing.
     secure_cookies: bool = True
+    # Time zone for dates and times shown in the UI, CSV and exports.
+    timezone: str = "Europe/Berlin"
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError(f"unknown time zone: {value}") from exc
+        return value
 
     @property
     def origin(self) -> str:

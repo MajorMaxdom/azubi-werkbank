@@ -282,6 +282,8 @@ def test_clean_drops_empty_optional_values():
     assert clean(data) == {"schema_version": 1, "days": [], "workbook": {"title": "T"},
                            "levels": {}}  # fmt: skip
     assert clean({"a": "x\r\ny"}) == {"a": "x\ny"}
+    assert clean({"optional": False, "multiple": False, "monospace": True, "enabled": False},
+                 top=False) == {"monospace": True, "enabled": False}  # fmt: skip
 
 
 def test_editor_loc_drops_union_tag():

@@ -380,3 +380,20 @@ def test_corrupt_progress_file_is_not_overwritten(config):
         assert page.status_code == 500
         assert "Es wurde nichts überschrieben" in page.text
     assert target.read_text() == "{broken"
+
+
+def test_saved_values_that_no_longer_fit_the_answer_type_are_not_rendered(config):
+    with open_client(config, "anna") as client:
+        patch(client, f"{API}/tasks/t1", {"answers": {"a1": "Aussteller", "cl": ["Kette"]}})
+        path = config.paths.workbooks / "demo.yaml"
+        checklist = "{id: cl, type: checklist, items: [Aussteller, Kette]}"
+        swapped = CATALOG.replace(checklist, "{id: cl, label: Frei}").replace(
+            "{id: a1, label: Text}", checklist.replace("id: cl", "id: a1")
+        )
+        path.write_text(swapped, encoding="utf-8")
+        client.app.state.registry.apply_changes({path})
+        html = client.get("/workbooks/demo").text
+    # The old text "Aussteller" must not tick the new checkbox via substring match,
+    # and the old list must not show up as "['Kette']" in the new text field.
+    assert 'name="a-t1-a1" value="Aussteller">' in html
+    assert "[&#39;Kette&#39;]" not in html and "['Kette']" not in html

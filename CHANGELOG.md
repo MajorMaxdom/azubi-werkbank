@@ -4,7 +4,24 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.5.0] - 2026-10-06
+## [1.5.1] - 2026-10-06
+
+### Fixed
+- Dates and times were shown in the server's time zone (usually UTC, i.e.
+  two hours off in German summer time; dates around midnight on the wrong
+  day). New config key `timezone` (default `Europe/Berlin`) is used for the
+  UI, CSV files, exports and download file names.
+- The per-IP login limiter kept an entry for every IP forever; old entries
+  are now forgotten.
+- The form editor wrote `optional: false`, `multiple: false` and
+  `monospace: false` into the YAML after toggling a checkbox; default values
+  are omitted again.
+- After an answer field changed its type in the catalog (e.g. text →
+  checklist), old saved values could tick checkboxes by substring match or
+  appear as `['…']` in a text field; values that no longer fit the type are
+  ignored when rendering (they stay in the file).
+
+ - 2026-10-06
 
 ### Added
 - Image housekeeping per workbook (`/admin/editor/{workbook}/assets`, link

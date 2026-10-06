@@ -32,6 +32,7 @@ from app.renderer import (
     WorkbookView,
     build_progress_view,
     german_date,
+    local_now,
     render_static,
 )
 
@@ -253,7 +254,7 @@ def export(request: Request, workbook_id: str, identity: CurrentUser, user: str 
         view=view,
         names=names,
     )
-    filename = f"arbeitsheft_{workbook_id}_{username or 'leer'}_{now:%Y-%m-%d}.html"
+    filename = f"arbeitsheft_{workbook_id}_{username or 'leer'}_{local_now():%Y-%m-%d}.html"
     return HTMLResponse(
         html,
         headers={
@@ -565,4 +566,4 @@ def my_tasks_csv(
     mt = my_task_groups(request, identity, filter, sup, scope)
     rows = [r.csv_values() for g in mt.groups for r in g.rows]
     content = build_csv(request.app.state.translator, rows)
-    return csv_response(content, f"meine_aufgaben_{datetime.now(UTC):%Y-%m-%d}.csv")
+    return csv_response(content, f"meine_aufgaben_{local_now():%Y-%m-%d}.csv")

@@ -79,15 +79,24 @@ def load_for_editor(path: Path) -> tuple[dict, str]:
 # --------------------------------------------------------------------------- cleaning & validation
 
 
+# Booleans whose default is false: an unticked checkbox is simply omitted.
+FALSE_DEFAULTS = {"optional", "multiple", "monospace"}
+
+
+def _is_empty(value: Any) -> bool:
+    return value is None or value == "" or value == [] or value == {}
+
+
 def clean(value: Any, *, top: bool = True) -> Any:
-    """Drop empty optional values (None, "", [], {}) sent by the form editor."""
+    """Drop empty optional values (None, "", [], {}, default ``false`` flags)
+    sent by the form editor."""
     if isinstance(value, dict):
         out = {}
         for key, item in value.items():
             item = clean(item, top=False)
             if top and key in REQUIRED_TOP_LEVEL:
                 out[key] = item
-            elif item is None or item == "" or item == [] or item == {}:
+            elif _is_empty(item) or (item is False and key in FALSE_DEFAULTS):
                 continue
             else:
                 out[key] = item

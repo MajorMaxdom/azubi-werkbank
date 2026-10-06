@@ -158,3 +158,31 @@ def test_static_output_is_self_contained(catalog_data):
     assert "/static/" not in html
     assert "data:font/woff2;base64," in html
     assert "<script" not in html
+
+
+def test_dates_are_shown_in_the_configured_time_zone():
+    from datetime import UTC, datetime
+
+    from app.renderer import german_date, german_datetime, set_display_timezone
+
+    late = datetime(2026, 10, 6, 22, 30, tzinfo=UTC)  # 00:30 in Berlin (CEST)
+    try:
+        set_display_timezone("Europe/Berlin")
+        assert german_date(late) == "07.10.2026"
+        assert german_datetime(late) == "07.10.2026 00:30"
+        assert german_datetime(datetime(2026, 1, 15, 12, 0, tzinfo=UTC)) == "15.01.2026 13:00"
+        set_display_timezone("UTC")
+        assert german_datetime(late) == "06.10.2026 22:30"
+    finally:
+        set_display_timezone("Europe/Berlin")
+    assert german_date("2026-10-06") == "06.10.2026"  # plain dates are not shifted
+
+
+def test_unknown_time_zone_is_a_config_error():
+    from pydantic import ValidationError
+
+    from app.config import Config
+
+    with pytest.raises(ValidationError):
+        Config(timezone="Mars/Olympus")
+    assert Config().timezone == "Europe/Berlin"

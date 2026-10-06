@@ -588,12 +588,20 @@ class IpRateLimiter:
 
     def blocked(self, ip: str) -> bool:
         with self._lock:
+            hits = self._hits.get(ip)
+            if hits is None:
+                return False
             return len(self._prune(ip, time.monotonic())) >= self.limit
 
     def record_failure(self, ip: str) -> None:
         with self._lock:
             now = time.monotonic()
             self._prune(ip, now).append(now)
+            if len(self._hits) > 1000:  # forget IPs whose window has passed
+                for key in [
+                    k for k, hits in self._hits.items() if not hits or hits[-1] <= now - self.window
+                ]:
+                    del self._hits[key]
 
 
 def client_ip(request: Request) -> str:

@@ -1,5 +1,5 @@
 {% set fid = "a-" ~ task.id ~ "-" ~ answer.id %}
-{% set value = pv.answer(task.id, answer.id) %}
+{% set value = pv.answer_for(task.id, answer) %}
 <div class="answer answer-{{ answer.type }}" data-answer="{{ answer.id }}" data-type="{{ answer.type }}"{% if answer.multiple %} data-multiple{% endif %}>
   {% if answer.type in ('checklist', 'choice') %}
   <fieldset{% if not answer.label %} aria-label="{{ t('a11y.answer_for', number=tv.number, title=task.title) }}"{% endif %}>

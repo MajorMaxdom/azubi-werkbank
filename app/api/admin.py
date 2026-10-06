@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -20,7 +19,7 @@ from app.loader import CatalogError, Entry
 from app.models.catalog import ID_PATTERN
 from app.models.users import User
 from app.progress import CorruptProgress, needs_check
-from app.renderer import german_date
+from app.renderer import german_date, local_now
 from app.theme import contrast_warnings
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_trainer)])
@@ -578,7 +577,7 @@ def overview_csv(request: Request, workbook: str | None = None) -> Response:
             for row in task_rows(request, view, progress, username, user, review_link=True):
                 rows.append(row.csv_values())
     content = build_csv(request.app.state.translator, rows)
-    filename = f"uebersicht_{workbook or 'alle'}_{datetime.now(UTC):%Y-%m-%d}.csv"
+    filename = f"uebersicht_{workbook or 'alle'}_{local_now():%Y-%m-%d}.csv"
     return csv_response(content, filename)
 
 

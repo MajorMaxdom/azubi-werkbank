@@ -34,7 +34,7 @@ from app.config import Config, load_config
 from app.i18n import Translator
 from app.loader import Registry
 from app.progress import CorruptProgress, ProgressStore
-from app.renderer import STATIC_DIR, create_environment
+from app.renderer import STATIC_DIR, create_environment, set_display_timezone
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ ERROR_MESSAGES = {
 
 def create_app(config: Config | None = None, *, watch: bool = True) -> FastAPI:
     config = config or load_config()
+    set_display_timezone(config.timezone)
     translator = Translator.from_file(config.paths.locales / "de.yaml")
     registry = Registry(config.paths.workbooks, translator)
     broadcaster = events.Broadcaster()

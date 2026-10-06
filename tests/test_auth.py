@@ -173,6 +173,16 @@ def test_ip_rate_limiter_window():
     assert not limiter.blocked("1.2.3.4")
 
 
+def test_ip_rate_limiter_forgets_old_ips():
+    limiter = IpRateLimiter(limit=5, window=0.05)
+    for n in range(1100):
+        limiter.record_failure(f"10.0.{n // 256}.{n % 256}")
+    time.sleep(0.06)
+    limiter.record_failure("1.2.3.4")
+    assert len(limiter._hits) == 1
+    assert not limiter.blocked("8.8.8.8") and "8.8.8.8" not in limiter._hits
+
+
 def test_x_forwarded_for_only_from_loopback():
     from starlette.requests import Request
 

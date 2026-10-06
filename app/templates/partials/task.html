@@ -103,7 +103,7 @@
       <textarea id="comment-{{ task.id }}" data-review-comment rows="2" placeholder="{{ t('trainer.comment_placeholder') }}"{% if not review %} disabled{% endif %}>{{ rv.comment if rv else '' }}</textarea>
     </div>
     {% endif %}
-    {% if review and rv and rv.reviewed_by and not export %}<p class="trainer-meta">{{ t('review.reviewed', name=review.name(rv.reviewed_by), date=rv.reviewed_at.astimezone().strftime('%d.%m.%Y %H:%M')) }}</p>{% endif %}
+    {% if review and rv and rv.reviewed_by and not export %}<p class="trainer-meta">{{ t('review.reviewed', name=review.name(rv.reviewed_by), date=rv.reviewed_at | de_datetime) }}</p>{% endif %}
     {% if review %}
     {% include "partials/review_history.html" %}
     {% set thread_url = '/api/progress/' ~ wb.meta.id ~ '/users/' ~ review.username ~ '/tasks/' ~ task.id ~ '/comments' if not static else none %}

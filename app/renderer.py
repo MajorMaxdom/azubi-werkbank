@@ -9,11 +9,12 @@ import json
 import mimetypes
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
 from functools import cache
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markdown_it import MarkdownIt
@@ -214,12 +215,33 @@ def create_environment(t: Translator | None = None) -> Environment:
     return env
 
 
+# Time zone for every date/time shown to users. Servers usually run in UTC,
+# so the zone is configured explicitly (config key ``timezone``).
+DEFAULT_TIMEZONE = "Europe/Berlin"
+_display_tz = ZoneInfo(DEFAULT_TIMEZONE)
+
+
+def set_display_timezone(name: str) -> None:
+    global _display_tz
+    _display_tz = ZoneInfo(name)
+
+
+def local_now() -> datetime:
+    return datetime.now(_display_tz)
+
+
+def _local(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(_display_tz)
+
+
 def german_date(value) -> str:
-    """ISO date or datetime -> ``dd.mm.yyyy`` (local time for datetimes)."""
+    """ISO date or datetime -> ``dd.mm.yyyy`` (datetimes in the display time zone)."""
     if not value:
         return ""
     if isinstance(value, datetime):
-        return value.astimezone().strftime("%d.%m.%Y")
+        return _local(value).strftime("%d.%m.%Y")
     if isinstance(value, date):
         return value.strftime("%d.%m.%Y")
     try:
@@ -228,11 +250,11 @@ def german_date(value) -> str:
         return str(value)
 
 
-def german_datetime(value: datetime | None) -> str:
-    """Datetime -> ``dd.mm.yyyy HH:MM`` in local time."""
+def german_datetime(value: datetime | None, seconds: bool = False) -> str:
+    """Datetime -> ``dd.mm.yyyy HH:MM`` in the display time zone."""
     if not value:
         return ""
-    return value.astimezone().strftime("%d.%m.%Y %H:%M")
+    return _local(value).strftime("%d.%m.%Y %H:%M:%S" if seconds else "%d.%m.%Y %H:%M")
 
 
 def textarea_rows(height: int | None) -> int:
@@ -356,6 +378,15 @@ class ProgressView:
     def answer(self, task_id: str, answer_id: str):
         tp = self.task(task_id)
         return tp.answers.get(answer_id) if tp else None
+
+    def answer_for(self, task_id: str, answer):
+        """The saved value if it still fits the answer type (types may change in
+        the catalog after an answer was saved); otherwise None."""
+        value = self.answer(task_id, answer.id)
+        multi = answer.type == "checklist" or (answer.type == "choice" and answer.multiple)
+        if multi:
+            return value if isinstance(value, list) else None
+        return value if isinstance(value, str) else None
 
     def header(self, field_id: str) -> str:
         return self.progress.header.get(field_id, "") if self.progress else ""

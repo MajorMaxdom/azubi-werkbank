@@ -22,7 +22,7 @@ from app.auth import (
     verify_form,
 )
 from app.progress import CorruptProgress
-from app.renderer import ExportInfo, render_static
+from app.renderer import ExportInfo, local_now, render_static
 
 router = APIRouter()
 
@@ -65,7 +65,7 @@ def build_data_zip(request: Request, username: str, now: datetime) -> bytes:
 
 def data_zip_response(request: Request, username: str) -> Response:
     now = datetime.now(UTC)
-    filename = f"daten_{username}_{now:%Y-%m-%d}.zip"
+    filename = f"daten_{username}_{local_now():%Y-%m-%d}.zip"
     return Response(
         build_data_zip(request, username, now),
         media_type="application/zip",

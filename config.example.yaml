@@ -24,6 +24,10 @@ login_lockout_minutes: 15
 invite_valid_hours: 72
 auth_mode: local            # reserved for a later "header" mode (Caddy forward_auth)
 
+# Time zone for dates and times shown in the UI, CSV files and exports
+# (the server itself usually runs in UTC).
+timezone: Europe/Berlin
+
 # __Host- cookies with the Secure flag. Only set to false for plain-HTTP
 # testing without Caddy (browsers drop Secure cookies over http://).
 secure_cookies: true
