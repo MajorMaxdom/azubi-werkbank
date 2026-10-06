@@ -111,6 +111,7 @@ def test_account_page_is_linked_in_user_menu(config):
 
 
 def test_password_change_success(config, caplog):
+    v0 = credentials(config)["anna"]["session_version"]
     with open_client(config, "anna") as client:
         other = second_client(client, "anna")
         assert other.get("/account").status_code == 200
@@ -126,10 +127,11 @@ def test_password_change_success(config, caplog):
         fresh = second_client(client)
         assert login(fresh, "anna").status_code == 401
         assert login(fresh, "anna", NEW_PASSWORD).status_code == 303
-    assert credentials(config)["anna"]["session_version"] == 2
+    assert credentials(config)["anna"]["session_version"] == v0 + 1
 
 
 def test_wrong_current_password(config, caplog):
+    v0 = credentials(config)["anna"]["session_version"]
     with open_client(config, "anna") as client:
         with caplog.at_level(logging.WARNING):
             r = change_password(client, current="falsches-passwort-123")
@@ -140,7 +142,7 @@ def test_wrong_current_password(config, caplog):
         assert client.get("/account").status_code == 200  # still logged in
     cred = credentials(config)["anna"]
     assert cred["failed_attempts"] == 1
-    assert cred["session_version"] == 1
+    assert cred["session_version"] == v0
     fresh_login_ok(config, "anna", PASSWORD)
 
 
@@ -167,15 +169,17 @@ def test_wrong_current_password_counts_towards_lockout(config):
     ],
 )
 def test_new_password_rules(config, new, repeat, message):
+    v0 = credentials(config)["anna"]["session_version"]
     with open_client(config, "anna") as client:
         r = change_password(client, new=new, repeat=repeat)
         assert r.status_code == 400
         assert message in r.text
-    assert credentials(config)["anna"]["session_version"] == 1
+    assert credentials(config)["anna"]["session_version"] == v0
     fresh_login_ok(config, "anna", PASSWORD)
 
 
 def test_password_change_requires_csrf_and_origin(config):
+    v0 = credentials(config)["anna"]["session_version"]
     data = {"current_password": PASSWORD, "password": NEW_PASSWORD,
             "password_repeat": NEW_PASSWORD}  # fmt: skip
     with open_client(config, "anna") as client:
@@ -187,7 +191,7 @@ def test_password_change_requires_csrf_and_origin(config):
             "/account", data={**data, "csrf_token": token}, headers={"Origin": "https://evil"}
         )
         assert r.status_code == 403
-    assert credentials(config)["anna"]["session_version"] == 1
+    assert credentials(config)["anna"]["session_version"] == v0
 
 
 def test_account_requires_login(config):
@@ -388,3 +392,23 @@ def test_apprentice_gets_403_on_admin_delete_and_export(config):
         )
         assert r.status_code == 403
         assert anna.app.state.users.get("ben") is not None
+
+
+def test_recreated_user_does_not_accept_old_session(tmp_path):
+    """A cookie of a deleted account must not log into a new account of the same name."""
+    from tests.conftest import add_user, make_config, open_client, second_client
+
+    config = make_config(tmp_path)
+    add_user(config, "boss", "trainer")
+    add_user(config, "anna", "apprentice")
+    with open_client(config, "boss") as boss:
+        old = second_client(boss, "anna")
+        assert old.get("/", follow_redirects=False).status_code == 200
+        accounts = boss.app.state.accounts
+        accounts.delete_user("anna", boss.app.state.progress, by="boss")
+        assert old.get("/", follow_redirects=False).status_code == 303
+        link = accounts.create_user("anna", "Anna Neu", "apprentice")
+        token = link.rsplit("/", 1)[1]
+        assert accounts.accept_invite(token, "neues-langes-passwort") == "anna"
+        # The old browser still holds the old cookie: it must stay logged out.
+        assert old.get("/", follow_redirects=False).status_code == 303

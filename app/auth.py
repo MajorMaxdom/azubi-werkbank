@@ -369,7 +369,11 @@ class CredentialStore:
         ensure_private_dir(self.path.parent)
         with locked(self.path):
             data = self.read()
-            cred = data.users.get(username) or Credential()
+            # New credentials start at a random session version, so a cookie of a
+            # deleted user can never match a re-created account of the same name.
+            cred = data.users.get(username) or Credential(
+                session_version=secrets.randbelow(2**31) + 1
+            )
             change(cred)
             data.users[username] = cred
             atomic_write(self.path, data.model_dump_json(indent=2) + "\n")
