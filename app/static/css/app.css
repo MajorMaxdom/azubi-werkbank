@@ -1034,6 +1034,16 @@ input[readonly] { color: var(--muted); background: var(--paper); }
 .port-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .port.is-ok { border-color: var(--ink); }
 
+/* ---------------------------------------------------------------- account & user deletion */
+
+.account-data { margin-top: 24px; }
+.account-data p { margin: 0; }
+.data-table .actions a + a,
+.data-table .actions form + a { margin-left: 4px; }
+.delete-list { margin: 4px 0 0; padding-left: 20px; }
+.button-danger { background: var(--redo); border-color: var(--redo); }
+.button-danger:hover { background: color-mix(in srgb, var(--redo) 75%, black); border-color: color-mix(in srgb, var(--redo) 75%, black); }
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 600px) {

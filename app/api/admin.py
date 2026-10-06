@@ -7,15 +7,16 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from app.api.account import data_zip_response
 from app.api.common import render
 from app.auth import Identity, is_valid_username, require_trainer, suggest_username, verify_form
 from app.i18n import Translator
 from app.loader import CatalogError, Entry
 from app.models.catalog import ID_PATTERN
 from app.models.users import User
-from app.progress import needs_check
+from app.progress import CorruptProgress, needs_check
 from app.renderer import german_date
 from app.theme import contrast_warnings
 
@@ -168,7 +169,7 @@ def user_rows(request: Request) -> list[UserRow]:
 
 def page(request: Request, status_code: int = 200, **context) -> HTMLResponse:
     defaults = {"form": {"name": "", "username": "", "role": "apprentice", "workbooks": []},
-                "error": None, "invite": None}  # fmt: skip
+                "error": None, "invite": None, "deleted": None}  # fmt: skip
     defaults.update(context)
     return render(
         request,
@@ -248,6 +249,102 @@ def activate_user(request: Request, username: str, identity: Trainer) -> Redirec
     username = _target(request, username, identity)
     request.app.state.accounts.set_active(username, True)
     return RedirectResponse("/admin/users", status_code=303)
+
+
+# --------------------------------------------------------------------------- data export & delete
+
+
+@router.get("/users/{username}/data")
+def user_data(request: Request, username: str, identity: Trainer) -> Response:
+    username = _target(request, username, identity)
+    return data_zip_response(request, username)
+
+
+@dataclass
+class ProgressSummary:
+    workbook_id: str
+    title: str
+    tasks: int | None  # tasks with saved data; None if the file is unreadable
+    done: int | None
+
+
+@dataclass
+class DeleteSummary:
+    has_credentials: bool
+    progress: list[ProgressSummary]
+    supervised: list[tuple[str, str, int]]  # (username, name, assignments)
+
+
+def delete_summary(request: Request, username: str) -> DeleteSummary:
+    state = request.app.state
+    catalogs = state.registry.catalogs()
+    progress = []
+    for wid, _path in state.progress.files_for(username):
+        catalog = catalogs.get(wid)
+        title = catalog.workbook.title if catalog else wid
+        try:
+            data = state.progress.load(wid, username)
+        except CorruptProgress:
+            progress.append(ProgressSummary(wid, title, None, None))
+            continue
+        done = sum(1 for tp in data.tasks.values() if tp.done)
+        progress.append(ProgressSummary(wid, title, len(data.tasks), done))
+    supervised = []
+    for other, user in sorted(state.users.all().items()):
+        count = 0
+        for supervision in user.supervisors.values():
+            count += supervision.default == username
+            count += sum(1 for name in supervision.tasks.values() if name == username)
+        if count and other != username:
+            supervised.append((other, user.name, count))
+    return DeleteSummary(
+        has_credentials=state.credentials.get(username) is not None,
+        progress=progress,
+        supervised=supervised,
+    )
+
+
+def delete_page(
+    request: Request, username: str, status_code: int = 200, error: str | None = None
+) -> HTMLResponse:
+    return render(
+        request,
+        "admin_user_delete.html",
+        status_code=status_code,
+        username=username,
+        user=request.app.state.users.get(username),
+        summary=delete_summary(request, username),
+        error=error,
+    )
+
+
+@router.get("/users/{username}/delete", response_class=HTMLResponse)
+def confirm_delete(request: Request, username: str, identity: Trainer) -> HTMLResponse:
+    username = _target(request, username, identity)
+    if username == identity.username:
+        return page(request, status_code=400, error="user_delete.error_self")
+    return delete_page(request, username)
+
+
+@router.post(
+    "/users/{username}/delete", dependencies=[Depends(verify_form)], response_class=HTMLResponse
+)
+def delete_user(
+    request: Request,
+    username: str,
+    identity: Trainer,
+    confirm: Annotated[str, Form(max_length=200)] = "",
+) -> HTMLResponse:
+    username = _target(request, username, identity)
+    if username == identity.username:
+        return page(request, status_code=400, error="user_delete.error_self")
+    if confirm.strip() != username:
+        return delete_page(request, username, status_code=400, error="user_delete.error_confirm")
+    name = request.app.state.users.get(username).name
+    request.app.state.accounts.delete_user(
+        username, request.app.state.progress, by=identity.username
+    )
+    return page(request, deleted={"username": username, "name": name})
 
 
 # --------------------------------------------------------------------------- edit apprentice

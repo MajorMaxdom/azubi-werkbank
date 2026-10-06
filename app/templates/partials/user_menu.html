@@ -7,6 +7,7 @@
   <a href="/admin/users">{{ t('nav.users') }}</a>
   <a href="/admin/catalogs">{{ t('nav.catalogs') }}</a>
   {% endif %}
+  <a href="/account">{{ t('account.nav') }}</a>
   <span class="user-name">{{ identity.user.name }}</span>
   <form method="post" action="/logout" class="inline-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

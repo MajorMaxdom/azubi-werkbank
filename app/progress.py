@@ -62,6 +62,35 @@ class ProgressStore:
     def exists(self, workbook_id: str, username: str) -> bool:
         return self.path(workbook_id, username).is_file()
 
+    def files_for(self, username: str) -> list[tuple[str, Path]]:
+        """``(workbook id, path)`` of every progress file of ``username``."""
+        if not _ID_RE.fullmatch(username):
+            raise ValueError("invalid id in progress path")
+        if not self.root.is_dir():
+            return []
+        found = []
+        for directory in sorted(self.root.iterdir()):
+            if not directory.is_dir() or not _ID_RE.fullmatch(directory.name):
+                continue
+            path = directory / f"{username}.json"
+            if path.is_file():
+                found.append((directory.name, path))
+        return found
+
+    def delete_user(self, username: str) -> int:
+        """Delete every progress file (and its lock file) of ``username``."""
+        files = self.files_for(username)
+        for _, path in files:
+            with locked(path):
+                path.unlink(missing_ok=True)
+        if self.root.is_dir():
+            for directory in self.root.iterdir():
+                if directory.is_dir() and _ID_RE.fullmatch(directory.name):
+                    (directory / f"{username}.json.lock").unlink(missing_ok=True)
+        if files:
+            log.info("progress.deleted user=%s files=%d", username, len(files))
+        return len(files)
+
     def update(
         self, catalog: Catalog, username: str, change: Callable[[Progress], None]
     ) -> Progress:

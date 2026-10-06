@@ -496,3 +496,46 @@ editor_ui:
   hint_src: z. B. assets/heft-id/bild.png
   hint_colors: Hex-Farben wie #1B365D. Leer lassen = Standardfarbe.
   id_locked: Gesperrt – zu dieser ID gibt es bereits gespeicherte Antworten.
+
+account:
+  nav: Konto
+  title: Mein Konto
+  intro: "Angemeldet als {name} (Benutzername „{username}“)."
+  password_heading: Passwort ändern
+  current_password: Aktuelles Passwort
+  password_submit: Passwort ändern
+  sessions_hint: Nach der Änderung werden alle anderen Anmeldungen (z. B. auf anderen Geräten) beendet.
+  password_changed: Dein Passwort wurde geändert. Andere Anmeldungen wurden beendet.
+  wrong_password: Das aktuelle Passwort ist nicht korrekt.
+  data_heading: Meine Daten herunterladen
+  data_text: Eine ZIP-Datei mit deinen Nutzerdaten, deinen gespeicherten Antworten und je Arbeitsheft einer HTML-Datei zum Ansehen und Drucken. Passwörter sind nicht enthalten.
+  data_download: Meine Daten herunterladen
+
+user_delete:
+  button: Löschen …
+  export: Daten exportieren
+  title: "Nutzer endgültig löschen: {name}"
+  intro: Das Löschen kann nicht rückgängig gemacht werden. Der Nutzer wird sofort abgemeldet.
+  what: Folgendes wird gelöscht
+  item_entry: "Eintrag „{username}“ ({name}) in users.yaml"
+  item_credentials: Zugangsdaten (Passwort, Einladung, Anmeldeversuche)
+  item_no_credentials: Zugangsdaten (keine vorhanden)
+  item_progress:
+    one: "{count} Fortschrittsdatei mit allen Antworten und Bewertungen:"
+    other: "{count} Fortschrittsdateien mit allen Antworten und Bewertungen:"
+  item_no_progress: Fortschrittsdateien (keine vorhanden)
+  progress_tasks:
+    one: "{count} Aufgabe bearbeitet"
+    other: "{count} Aufgaben bearbeitet"
+  progress_done: "{count} erledigt"
+  progress_unreadable: Datei nicht lesbar
+  item_supervisors: "Zuordnungen als Fachbetreuer bei:"
+  supervisor_count:
+    one: "{count} Zuordnung"
+    other: "{count} Zuordnungen"
+  export_hint: Vorher die Daten sichern?
+  confirm_label: "Zur Bestätigung den Benutzernamen „{username}“ eingeben"
+  submit: Endgültig löschen
+  error_confirm: Der eingegebene Benutzername stimmt nicht überein. Es wurde nichts gelöscht.
+  error_self: Du kannst dein eigenes Konto nicht löschen.
+  deleted: "{name} ({username}) wurde mit allen Daten gelöscht."

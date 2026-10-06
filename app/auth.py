@@ -46,6 +46,7 @@ from app.models.users import (
     User,
     UsersFile,
 )
+from app.progress import ProgressStore
 
 log = logging.getLogger(__name__)
 
@@ -181,6 +182,27 @@ class UserDirectory:
 
         self._modify(change)
 
+    def remove(self, username: str) -> int:
+        """Delete the user and every Fachbetreuer assignment pointing to them.
+
+        Returns the number of removed assignments (workbook defaults and task
+        overrides in other users' ``supervisors``).
+        """
+        removed = 0
+
+        def change(users: CommentedMap) -> None:
+            nonlocal removed
+            if username not in users:
+                raise KeyError(username)
+            del users[username]
+            for entry in users.values():
+                if not isinstance(entry, CommentedMap):
+                    continue
+                removed += _drop_supervisor(entry, username)
+
+        self._modify(change)
+        return removed
+
     def _modify(self, change: Callable[[CommentedMap], None]) -> None:
         yaml = YAML()
         yaml.preserve_quotes = True
@@ -222,6 +244,33 @@ class UserDirectory:
             await asyncio.to_thread(self.load)
 
 
+def _drop_supervisor(entry: CommentedMap, username: str) -> int:
+    """Remove ``username`` from one users.yaml entry's ``supervisors`` block."""
+    supervisors = entry.get("supervisors")
+    if not isinstance(supervisors, CommentedMap):
+        return 0
+    removed = 0
+    for wid in list(supervisors):
+        block = supervisors[wid]
+        if not isinstance(block, CommentedMap):
+            continue
+        if block.get("default") == username:
+            del block["default"]
+            removed += 1
+        tasks = block.get("tasks")
+        if isinstance(tasks, CommentedMap):
+            for task_id in [k for k, v in tasks.items() if v == username]:
+                del tasks[task_id]
+                removed += 1
+            if not tasks:
+                del block["tasks"]
+        if not block:
+            del supervisors[wid]
+    if not supervisors:
+        del entry["supervisors"]
+    return removed
+
+
 def _short_error(exc: Exception) -> str:
     if isinstance(exc, ValidationError):
         parts = []
@@ -260,6 +309,17 @@ class CredentialStore:
             data.users[username] = cred
             atomic_write(self.path, data.model_dump_json(indent=2) + "\n")
             return cred
+
+    def remove(self, username: str) -> bool:
+        """Delete the credentials of ``username``. True if there were any."""
+        if not self.path.exists():
+            return False
+        with locked(self.path):
+            data = self.read()
+            if data.users.pop(username, None) is None:
+                return False
+            atomic_write(self.path, data.model_dump_json(indent=2) + "\n")
+            return True
 
     def find_by_invite(self, token: str) -> tuple[str, Credential] | None:
         token_hash = hash_token(token)
@@ -403,6 +463,29 @@ class AccountService:
             log.info("auth.invite_accepted user=%s", username)
         return username if accepted else None
 
+    def change_password(self, username: str, password: str) -> None:
+        """Store a new password and end all sessions (the caller re-issues its own)."""
+
+        def change(cred: Credential) -> None:
+            cred.password_hash = hash_password(password)
+            cred.session_version += 1
+            cred.failed_attempts = 0
+            cred.locked_until = None
+
+        self.store.update(username, change)
+        log.info("auth.password_changed user=%s", username)
+
+    def delete_user(self, username: str, progress: ProgressStore, by: str) -> None:
+        """Remove the user for good: users.yaml entry (and Fachbetreuer assignments
+        pointing to them), credentials and every progress file."""
+        if not is_valid_username(username):
+            raise ValueError(f"Invalid username: {username!r}")
+        # users.yaml first: the user's sessions end as soon as the entry is gone.
+        self.directory.remove(username)
+        self.store.remove(username)
+        progress.delete_user(username)
+        log.info("auth.user_deleted user=%s by=%s", username, by)
+
     def status(self, username: str) -> str:
         """``active`` | ``invited`` | ``invite_expired`` | ``no_access`` | ``inactive``."""
         user = self.directory.get(username)
@@ -488,10 +571,26 @@ class LoginService:
         self._fail(username, ip, cred if user is not None else None)
         return None
 
-    def _fail(self, username: str, ip: str, cred: Credential | None) -> None:
+    def check_current_password(self, username: str, password: str, ip: str) -> bool:
+        """Re-check the password of a logged-in user (e.g. before changing it).
+
+        A wrong password counts like a failed login (per-user lockout, IP limit).
+        """
+        cred = self.accounts.store.get(username)
+        locked_out = bool(cred and cred.locked_until and cred.locked_until > utcnow())
+        blocked = self.limiter.blocked(ip)
+        password_ok = verify_password(cred.password_hash if cred else None, password)
+        if password_ok and not locked_out and not blocked:
+            return True
+        self._fail(username, ip, cred, event="auth.password_change_failed")
+        return False
+
+    def _fail(
+        self, username: str, ip: str, cred: Credential | None, event: str = "auth.login_failed"
+    ) -> None:
         self.limiter.record_failure(ip)
         shown = username if is_valid_username(username) else "-"
-        log.warning("auth.login_failed user=%s ip=%s", shown, ip)
+        log.warning("%s user=%s ip=%s", event, shown, ip)
         if cred is None:
             return
         max_attempts = self.config.login_max_attempts

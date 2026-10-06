@@ -1,0 +1,48 @@
+{% extends "page.html" %}
+{% block title %}{{ t('user_delete.title', name=user.name) }}{% endblock %}
+{% block content %}
+<p><a href="/admin/users">{{ t('admin.users.back') }}</a></p>
+<h1 class="page-title">{{ t('user_delete.title', name=user.name) }}</h1>
+<p class="page-intro">{{ t('user_delete.intro') }}</p>
+{% if error %}<p class="form-error" role="alert">{{ t(error) }}</p>{% endif %}
+
+<div class="confirm-box">
+  <span class="micro-label">{{ t('user_delete.what') }}</span>
+  <ul>
+    <li>{{ t('user_delete.item_entry', username=username, name=user.name) }}</li>
+    <li>{{ t('user_delete.item_credentials') if summary.has_credentials else t('user_delete.item_no_credentials') }}</li>
+    {% if summary.progress %}
+    <li>{{ t('user_delete.item_progress', count=summary.progress | length) }}
+      <ul class="delete-list">
+        {% for p in summary.progress %}
+        <li>{{ p.title }} <span class="mono">({{ p.workbook_id }})</span> –
+          {% if p.tasks is none %}{{ t('user_delete.progress_unreadable') }}{% else %}{{ t('user_delete.progress_tasks', count=p.tasks) }}, {{ t('user_delete.progress_done', count=p.done) }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </li>
+    {% else %}
+    <li>{{ t('user_delete.item_no_progress') }}</li>
+    {% endif %}
+    {% if summary.supervised %}
+    <li>{{ t('user_delete.item_supervisors') }}
+      <ul class="delete-list">
+        {% for other, name, count in summary.supervised %}
+        <li>{{ name }} <span class="mono">({{ other }})</span> – {{ t('user_delete.supervisor_count', count=count) }}</li>
+        {% endfor %}
+      </ul>
+    </li>
+    {% endif %}
+  </ul>
+</div>
+
+<p>{{ t('user_delete.export_hint') }} <a href="/admin/users/{{ username }}/data">{{ t('user_delete.export') }}</a></p>
+
+<form method="post" action="/admin/users/{{ username }}/delete" class="panel form-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="field">
+    <label class="micro-label" for="confirm-username">{{ t('user_delete.confirm_label', username=username) }}</label>
+    <input id="confirm-username" name="confirm" type="text" class="mono-input" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+  </div>
+  <button type="submit" class="button button-danger">{{ t('user_delete.submit') }}</button>
+</form>
+{% endblock %}
