@@ -19,3 +19,4 @@ users.yaml
 files.zip
 *.html.out
 *.lock
+.claude/
