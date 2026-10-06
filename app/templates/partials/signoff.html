@@ -1,0 +1,15 @@
+<section class="signoff" id="signoff">
+  <h2>{{ wb.meta.signoff.title or t('signoff.title') }}</h2>
+  <label class="micro-label" for="signoff-comment">{{ t('signoff.comment') }}</label>
+  <textarea id="signoff-comment" data-signoff="comment" rows="5" placeholder="{{ t('signoff.comment_placeholder') }}"></textarea>
+  <div class="field-grid">
+    <div class="field">
+      <label class="micro-label" for="signoff-date">{{ t('signoff.date') }}</label>
+      <input id="signoff-date" data-signoff="date" type="date">
+    </div>
+    <div class="field">
+      <label class="micro-label" for="signoff-by">{{ t('signoff.by') }}</label>
+      <input id="signoff-by" data-signoff="by" type="text" placeholder="{{ t('signoff.by_placeholder') }}">
+    </div>
+  </div>
+</section>

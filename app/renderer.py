@@ -1,0 +1,336 @@
+"""Turn validated catalogs into HTML: markdown, durations, day load, numbering,
+task hashes, per-workbook theme CSS and the Jinja2 environment."""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+import mimetypes
+import re
+from dataclasses import dataclass, field
+from decimal import ROUND_HALF_EVEN, Decimal
+from functools import cache
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markdown_it import MarkdownIt
+from markupsafe import Markup
+
+from app.i18n import ROOT, Translator, get_translator
+from app.models.catalog import (
+    DURATION_PATTERN,
+    HEX_COLOR_PATTERN,
+    Catalog,
+    Day,
+    Module,
+    Stylesheet,
+    Task,
+)
+
+APP_DIR = Path(__file__).resolve().parent
+TEMPLATES_DIR = APP_DIR / "templates"
+STATIC_DIR = APP_DIR / "static"
+
+# --------------------------------------------------------------------------- markdown
+
+# CommonMark with raw HTML disabled: "<b>" in catalog text is shown literally.
+_md = MarkdownIt("commonmark", {"html": False})
+
+
+def render_markdown(text: str | None) -> Markup:
+    return Markup(_md.render(text or ""))
+
+
+def render_markdown_inline(text: str | None) -> Markup:
+    return Markup(_md.renderInline(text or ""))
+
+
+# --------------------------------------------------------------------------- durations
+
+_DURATION_RE = re.compile(DURATION_PATTERN)
+
+
+def parse_duration(value: str | None) -> int:
+    """Return minutes for a duration like ``45m``, ``1h`` or ``1h30m`` (None -> 0)."""
+    if not value:
+        return 0
+    match = _DURATION_RE.fullmatch(value)
+    if not match:
+        raise ValueError(f"Invalid duration: {value!r}")
+    hours, minutes = match.groups()
+    total = int(hours[:-1]) * 60 if hours else 0
+    total += int(minutes[:-1]) if minutes else 0
+    return total
+
+
+def format_hours(minutes: int) -> str:
+    """German hour figure with one decimal, e.g. 150 -> "2,5", 180 -> "3", 195 -> "3,2"."""
+    hours = (Decimal(minutes) / Decimal(60)).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
+    text = f"{hours:f}"
+    if text.endswith(".0"):
+        text = text[:-2]
+    return text.replace(".", ",")
+
+
+def day_load_text(task_count: int, minutes: int, t: Translator) -> str:
+    tasks = t("day.tasks", count=task_count)
+    if not minutes:
+        return tasks
+    return t("day.load", tasks=tasks, hours=format_hours(minutes))
+
+
+# --------------------------------------------------------------------------- hashing
+
+
+def task_hash(task: Task) -> str:
+    """SHA-256 of the normalized task content, excluding trainer-only data."""
+    payload = task.model_dump(mode="json", exclude={"trainer"})
+    normalized = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+# --------------------------------------------------------------------------- theme
+
+STYLESHEET_PROPERTIES: dict[str, str] = {
+    "paper": "--paper",
+    "card": "--card",
+    "ink": "--ink",
+    "muted": "--muted",
+    "line": "--line",
+    "accent": "--accent",
+    "accent_hover": "--accent-hover",
+    "accent_soft": "--accent-soft",
+    "ok": "--ok",
+    "redo": "--redo",
+    "hint_bg": "--hint-bg",
+    "trainer_bg": "--trainer-bg",
+    "bonus_bg": "--bonus-bg",
+}
+LEVEL_PROPERTIES: dict[str, str] = {
+    color: f"--level-{color}" for color in ("blue", "ochre", "green", "grey", "red")
+}
+_HEX_RE = re.compile(HEX_COLOR_PATTERN)
+
+
+def theme_declarations(stylesheet: Stylesheet | None) -> list[tuple[str, str]]:
+    if stylesheet is None:
+        return []
+    decls: list[tuple[str, str]] = []
+    for key, prop in STYLESHEET_PROPERTIES.items():
+        value = getattr(stylesheet, key)
+        if value is not None:
+            decls.append((prop, value))
+    if stylesheet.level_palette is not None:
+        for key, prop in LEVEL_PROPERTIES.items():
+            value = getattr(stylesheet.level_palette, key)
+            if value is not None:
+                decls.append((prop, value))
+    for prop, value in decls:
+        # Defense in depth: the model already validated these.
+        if not _HEX_RE.fullmatch(value):
+            raise ValueError(f"Refusing non-hex color for {prop}")
+    return decls
+
+
+def theme_css(stylesheet: Stylesheet | None) -> str:
+    """Generated per-workbook overrides: one ``:root`` block with only the set keys."""
+    decls = theme_declarations(stylesheet)
+    if not decls:
+        return ""
+    body = "".join(f"  {prop}: {value};\n" for prop, value in decls)
+    return f":root {{\n{body}}}\n"
+
+
+def theme_hash(css: str) -> str:
+    return hashlib.sha256(css.encode("utf-8")).hexdigest()[:16]
+
+
+# --------------------------------------------------------------------------- view model
+
+
+@dataclass
+class TaskView:
+    task: Task
+    number: str
+    minutes: int
+    hash: str
+
+
+@dataclass
+class ModuleView:
+    module: Module
+    tasks: list[TaskView]
+
+
+@dataclass
+class DayView:
+    day: Day
+    index: int
+    label: str
+    nav_tag: str
+    nav_label: str
+    task_count: int
+    minutes: int
+    load: str
+    modules: list[ModuleView]
+
+
+@dataclass
+class WorkbookView:
+    catalog: Catalog
+    days: list[DayView]
+    task_count: int
+    theme_css: str
+    theme_hash: str
+    tasks_by_id: dict[str, TaskView] = field(default_factory=dict)
+
+    @property
+    def meta(self):
+        return self.catalog.workbook
+
+
+def build_view(catalog: Catalog, t: Translator | None = None) -> WorkbookView:
+    t = t or get_translator()
+    days: list[DayView] = []
+    by_id: dict[str, TaskView] = {}
+    for d_index, day in enumerate(catalog.days, start=1):
+        nav_tag = day.nav_tag or str(d_index)
+        number_prefix = nav_tag if day.optional else str(d_index)
+        modules: list[ModuleView] = []
+        position = 0
+        minutes = 0
+        for module in day.modules:
+            views: list[TaskView] = []
+            for task in module.tasks:
+                position += 1
+                view = TaskView(
+                    task=task,
+                    number=task.number or f"{number_prefix}.{position}",
+                    minutes=parse_duration(task.duration),
+                    hash=task_hash(task),
+                )
+                minutes += view.minutes
+                views.append(view)
+                by_id[task.id] = view
+            modules.append(ModuleView(module=module, tasks=views))
+        days.append(
+            DayView(
+                day=day,
+                index=d_index,
+                label=t("day.optional") if day.optional else t("day.label", n=d_index),
+                nav_tag=nav_tag,
+                nav_label=day.nav_label or day.title,
+                task_count=position,
+                minutes=minutes,
+                load=day_load_text(position, minutes, t),
+                modules=modules,
+            )
+        )
+    css = theme_css(catalog.workbook.stylesheet)
+    return WorkbookView(
+        catalog=catalog,
+        days=days,
+        task_count=len(by_id),
+        theme_css=css,
+        theme_hash=theme_hash(css),
+        tasks_by_id=by_id,
+    )
+
+
+# --------------------------------------------------------------------------- templates
+
+
+@cache
+def _icon_svg(name: str) -> str:
+    if not re.fullmatch(r"[a-z0-9-]+", name):
+        raise ValueError(f"Invalid icon name: {name!r}")
+    svg = (STATIC_DIR / "icons" / f"{name}.svg").read_text(encoding="utf-8")
+    svg = re.sub(r"<!--.*?-->\s*", "", svg, flags=re.S)
+    svg = re.sub(r"\s+", " ", svg).strip()
+    return svg.replace("<svg ", '<svg aria-hidden="true" focusable="false" ', 1).replace(
+        'class="lucide ', 'class="icon lucide ', 1
+    )
+
+
+def icon(name: str) -> Markup:
+    return Markup(_icon_svg(name))
+
+
+def create_environment(t: Translator | None = None) -> Environment:
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATES_DIR),
+        autoescape=select_autoescape(default=True, default_for_string=True),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    env.globals["t"] = t or get_translator()
+    env.globals["icon"] = icon
+    env.filters["md"] = render_markdown
+    env.filters["md_inline"] = render_markdown_inline
+    env.filters["textarea_rows"] = textarea_rows
+    return env
+
+
+def textarea_rows(height: int | None) -> int:
+    """Approximate a min-height in px as textarea rows (inline styles are forbidden by CSP)."""
+    if not height:
+        return 4
+    return max(2, round(height / 24))
+
+
+# --------------------------------------------------------------------------- static output
+
+_CSS_URL_RE = re.compile(r"url\(\"?(\.\./fonts/[A-Za-z0-9._-]+)\"?\)")
+
+
+def _data_uri(path: Path) -> str:
+    mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    if path.suffix == ".woff2":
+        mime = "font/woff2"
+    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
+
+
+def inline_base_css() -> str:
+    """fonts.css (with fonts embedded) + tokens.css + app.css, for offline files."""
+    css_dir = STATIC_DIR / "css"
+    parts = []
+    for name in ("fonts.css", "tokens.css", "app.css"):
+        css = (css_dir / name).read_text(encoding="utf-8")
+        css = _CSS_URL_RE.sub(lambda m: f'url("{_data_uri(css_dir / m.group(1))}")', css)
+        parts.append(css)
+    return "\n".join(parts)
+
+
+def static_asset_url(workbooks_dir: Path):
+    """Asset resolver for offline files: embed images as data URIs when present."""
+
+    def resolve(src: str) -> str:
+        path = (workbooks_dir / src).resolve()
+        assets = (workbooks_dir / "assets").resolve()
+        if path.is_relative_to(assets) and path.is_file():
+            return _data_uri(path)
+        return src
+
+    return resolve
+
+
+def render_static(
+    catalog: Catalog,
+    *,
+    trainer: bool = True,
+    workbooks_dir: Path | None = None,
+    t: Translator | None = None,
+) -> str:
+    """Render a self-contained HTML preview with tokens and theme inlined."""
+    env = create_environment(t)
+    view = build_view(catalog, t)
+    template = env.get_template("workbook.html")
+    return template.render(
+        wb=view,
+        is_trainer=trainer,
+        static=True,
+        inline_css=Markup(inline_base_css()),
+        inline_theme=Markup(view.theme_css),
+        asset_url=static_asset_url(workbooks_dir or ROOT / "workbooks"),
+    )

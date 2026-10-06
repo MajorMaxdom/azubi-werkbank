@@ -1,0 +1,51 @@
+# German UI strings. Keys are English, values are shown in the browser.
+# Placeholders: {name} (str.format). Plurals: {one: ..., other: ...} + count.
+
+topbar:
+  progress: "{done} / {total} erledigt ({percent} %)"
+  progress_label: Gesamtfortschritt
+
+nav:
+  label: Schnellnavigation
+
+day:
+  label: "Tag {n}"
+  optional: Optional
+  tasks:
+    one: "{count} Aufgabe"
+    other: "{count} Aufgaben"
+  load: "{tasks} · ~{hours} h"
+
+module:
+  objective: Lernziel
+  ports_label: "{done} von {total} Aufgaben erledigt"
+
+task:
+  requirement: Anforderung
+  duration: "ca. {minutes} Min."
+  hints: Hilfestellung anzeigen
+  bonus: Extra, wenn du früher fertig bist
+  mark_done: Aufgabe erledigt
+
+block:
+  note_info: Hinweis
+  note_warning: Achtung
+
+trainer:
+  heading: Bereich Ausbilder
+  expectations: "Das sollte drinstehen:"
+  notes: "Interne Notizen:"
+  status: Status
+  status_none: "— Status —"
+  status_ok: OK
+  status_redo: Nacharbeiten
+  comment: Kommentar
+  comment_placeholder: "Kommentar / Feedback …"
+
+signoff:
+  title: Gesamtbewertung & Abnahme
+  comment: "Gesamtfeedback:"
+  comment_placeholder: "Gesamteindruck, Stärken, Entwicklungsfelder …"
+  date: Geprüft am
+  by: Geprüft durch
+  by_placeholder: Name Ausbilder/in

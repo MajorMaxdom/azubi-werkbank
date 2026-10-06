@@ -1,0 +1,32 @@
+{% if block.type == 'text' %}
+<div class="block-text prose">{{ block.content | md }}</div>
+{% elif block.type == 'table' %}
+<div class="table-wrap">
+  <table class="block-table">
+    {% if block.caption %}<caption>{{ block.caption }}</caption>{% endif %}
+    <thead><tr>{% for col in block.columns %}<th scope="col">{{ col }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in block.rows %}<tr>{% for cell in row %}<td>{{ cell | md_inline }}</td>{% endfor %}</tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif block.type == 'snippet' %}
+<figure class="block-snippet">
+  {% if block.caption %}<figcaption class="micro-label">{{ block.caption }}</figcaption>{% endif %}
+  <pre class="snippet">{{ block.content }}</pre>
+</figure>
+{% elif block.type == 'steps' %}
+<ol class="steps">{% for item in block.items %}<li>{{ item | md_inline }}</li>{% endfor %}</ol>
+{% elif block.type == 'questions' %}
+<ul class="questions">{% for item in block.items %}<li>{{ item | md_inline }}</li>{% endfor %}</ul>
+{% elif block.type == 'image' %}
+<figure class="block-image">
+  <img src="{{ asset_url(block.src) }}" alt="{{ block.alt }}" loading="lazy">
+  {% if block.caption %}<figcaption>{{ block.caption }}</figcaption>{% endif %}
+</figure>
+{% elif block.type == 'note' %}
+<aside class="note note-{{ block.variant }}">
+  <span class="note-head">{{ icon('triangle-alert' if block.variant == 'warning' else 'info') }}<span class="micro-label">{{ t('block.note_warning') if block.variant == 'warning' else t('block.note_info') }}</span></span>
+  <div class="prose">{{ block.content | md }}</div>
+</aside>
+{% endif %}

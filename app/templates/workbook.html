@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ wb.meta.title }}{% endblock %}
+{% block theme %}
+{% if wb.theme_css %}
+<link rel="stylesheet" href="/workbooks/{{ wb.meta.id }}/theme.css?v={{ wb.theme_hash }}">
+{% endif %}
+{% endblock %}
+{% block body_class %}{{ 'workbook is-trainer' if is_trainer else 'workbook' }}{% endblock %}
+{% block body %}
+<div class="sticky-head">
+  <header class="topbar">
+    {% if wb.meta.brand %}<span class="brand">{{ wb.meta.brand }}</span>{% endif %}
+    <div class="progress" data-progress>
+      <progress class="progress-bar" max="{{ wb.task_count }}" value="0" aria-label="{{ t('topbar.progress_label') }}"></progress>
+      <span class="progress-text" data-progress-text>{{ t('topbar.progress', done=0, total=wb.task_count, percent=0) }}</span>
+    </div>
+    {% block topbar_extra %}{% endblock %}
+  </header>
+  <nav class="quicknav" aria-label="{{ t('nav.label') }}">
+    {% for d in wb.days %}
+    <a href="#{{ d.day.id }}"><span class="quicknav-tag">{{ d.nav_tag }}</span> · {{ d.nav_label }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<main class="sheet">
+  <header class="doc-head">
+    <h1>{{ wb.meta.title }}</h1>
+    {% if wb.meta.subtitle %}<p class="doc-sub">{{ wb.meta.subtitle }}</p>{% endif %}
+    {% if wb.meta.header_fields %}
+    <div class="field-grid">
+      {% for f in wb.meta.header_fields %}
+      <div class="field">
+        <label class="micro-label" for="h-{{ f.id }}">{{ f.label }}</label>
+        {% if f.type == 'text' %}
+        <textarea id="h-{{ f.id }}" data-header="{{ f.id }}" rows="3"{% if f.placeholder %} placeholder="{{ f.placeholder }}"{% endif %}></textarea>
+        {% else %}
+        <input id="h-{{ f.id }}" data-header="{{ f.id }}" type="{{ 'date' if f.type == 'date' else 'text' }}"{% if f.placeholder %} placeholder="{{ f.placeholder }}"{% endif %}>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if wb.meta.intro %}<div class="intro prose">{{ wb.meta.intro | md }}</div>{% endif %}
+  </header>
+
+  {% for d in wb.days %}
+  <section class="day{% if d.day.optional %} is-optional{% endif %}" aria-labelledby="{{ d.day.id }}-title">
+    <div class="day-banner" id="{{ d.day.id }}">
+      <span class="day-label">{{ d.label }}</span>
+      <h2 class="day-title" id="{{ d.day.id }}-title">{{ d.day.title }}</h2>
+      {% if d.day.subtitle %}<span class="day-sub">{{ d.day.subtitle }}</span>{% endif %}
+      <span class="day-load">{{ d.load }}</span>
+    </div>
+
+    {% for m in d.modules %}
+    <section class="module" data-module="{{ m.module.code }}">
+      <div class="module-head">
+        <span class="module-code">{{ m.module.code }}</span>
+        <h3 class="module-title">{{ m.module.title }}</h3>
+        <span class="ports" data-ports role="img" aria-label="{{ t('module.ports_label', done=0, total=m.tasks | length) }}">
+          {% for tv in m.tasks %}<span class="port" data-port="{{ tv.task.id }}"></span>{% endfor %}
+        </span>
+      </div>
+      {% if m.module.objective %}
+      <div class="module-goal prose"><span class="micro-label">{{ t('module.objective') }}</span>{{ m.module.objective | md }}</div>
+      {% endif %}
+      {% for tv in m.tasks %}
+      {% include "partials/task.html" %}
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  {% if wb.meta.signoff.enabled and is_trainer %}
+  {% include "partials/signoff.html" %}
+  {% endif %}
+
+  {% if wb.meta.footer %}<footer class="doc-foot">{{ wb.meta.footer }}</footer>{% endif %}
+</main>
+{% endblock %}

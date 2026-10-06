@@ -1,0 +1,273 @@
+# =============================================================================
+# WORKBOOK TEMPLATE — reference of ALL available fields
+# =============================================================================
+# Copy this file to  workbooks/<workbook-id>.yaml  and adjust it.
+#
+# Conventions
+#   - Keys are English. All content (texts shown in the browser) is German.
+#   - (required) fields must be present. Everything else is optional and is
+#     simply not rendered when omitted.
+#   - (markdown) fields support **bold**, *italic*, `code`, lists and links.
+#     Raw HTML is NOT allowed and will be escaped.
+#   - IDs: lowercase a-z, 0-9 and "-". Unique within the workbook.
+#     NEVER change an ID once apprentices have started: progress is stored
+#     by ID. Titles and texts may be changed at any time.
+#   - The same structure can also be written as JSON (.json).
+#   - Files starting with "_" (like _template.yaml) are ignored by the server.
+# =============================================================================
+
+schema_version: 1                       # (required) version of this file format
+
+# -----------------------------------------------------------------------------
+# Workbook metadata
+# -----------------------------------------------------------------------------
+workbook:
+  id: example-workbook                  # (required) used in URLs and progress paths
+  version: 1.0.0                        # (required) semantic version of the content
+  title: "Arbeitsheft: Beispielthema"   # (required) main heading
+  subtitle: "Fachinformatik Systemintegration · 1. Lehrjahr · 5 Tage"
+  brand: "AZUBI-WERKBANK // HEFT"       # short label in the top bar
+  description: >                        # one or two sentences for the start page
+    Kurzbeschreibung des Hefts für die Übersichtsseite.
+  intro: |                              # (markdown) intro box below the header
+    **Worum geht es?** Ein Beispielheft für das erste Lehrjahr – Vorwissen
+    ist nicht nötig.
+
+    **So arbeitest du:** Antworten in eigenen Worten eintippen, Aufgabe
+    abhaken, fertig. Gespeichert wird automatisch.
+
+  header_fields:                        # extra per-user inputs in the header
+    - id: start-date                    # (required) unique within header_fields
+      label: Bearbeitung ab             # (required)
+      type: date                        # date | short | text
+    - id: period
+      label: Geplanter Zeitraum
+      type: short
+      placeholder: "z. B. KW 41, Mo–Fr"
+
+  footer: "Übungen nur auf der eigenen Lab-VM"   # small note at the bottom
+
+  signoff:                              # final trainer sign-off at the end
+    enabled: true                       # default: true
+    title: "Gesamtbewertung & Abnahme"  # optional, overrides the default title
+
+  stylesheet:                           # optional color overrides for THIS workbook
+    # Omit the whole block to use the default scheme. Every key is optional:
+    # missing keys keep their default. Values: hex colors only (#RGB or #RRGGBB).
+    paper: "#F4F6F8"                    # page background
+    card: "#FFFFFF"                     # cards, task boxes
+    ink: "#1A2433"                      # body text
+    muted: "#5B6878"                    # secondary text, micro labels
+    line: "#D6DCE3"                     # rules, borders
+    accent: "#1B365D"                   # top bar, headings, buttons, progress
+    accent_hover: "#142844"             # default: derived from accent
+    accent_soft: "#E8EBEF"              # default: derived from accent
+    ok: "#1F7A4D"                       # done, review OK, lit port LEDs
+    redo: "#B5541C"                     # review "Nacharbeiten"
+    hint_bg: "#EEF3F9"                  # hints box
+    trainer_bg: "#FAF5EA"               # trainer area
+    bonus_bg: "#F3F4F7"                 # bonus box
+    level_palette:                      # colors behind the level color names
+      blue: "#2F5D8A"
+      ochre: "#9A6A12"
+      green: "#2E7D52"
+      grey: "#5B6878"
+      red: "#A8432A"
+
+# -----------------------------------------------------------------------------
+# Levels — difficulty / type of a task. Order here = display order in legends.
+# -----------------------------------------------------------------------------
+levels:
+  understand:                           # key is referenced by tasks[].level
+    label: Verstehen                    # (required) badge text
+    color: blue                         # blue | ochre | green | grey | red
+    description: "Lesen, recherchieren und in eigenen Worten erklären."
+  observe:
+    label: Beobachten
+    color: ochre
+    description: "Mit vorgegebenem Klickpfad am System nachschauen, nichts ändern."
+  apply:
+    label: Anwenden
+    color: green
+    description: "Eine klar umrissene Sache selbst tun."
+
+# -----------------------------------------------------------------------------
+# Days -> modules -> tasks
+# -----------------------------------------------------------------------------
+days:
+  - id: day-1                           # (required) anchor for the quick nav
+    title: "Erste Schritte"             # (required)
+    subtitle: "Grundlagen für die restliche Woche"
+    nav_label: Grundlagen               # short label in the quick nav (default: title)
+    nav_tag: "1"                        # badge in the quick nav (default: running number)
+    optional: false                     # true = rendered as optional day
+    # The day load ("3 Aufgaben · ~2,5 h") is calculated automatically
+    # from the number of tasks and their durations.
+
+    modules:
+      - code: SYS-01                    # (required) unique module code
+        title: Der Linux-Systemstart    # (required)
+        objective: |                    # (markdown) learning objective
+          Du kannst erklären, was beim Start eines Linux-Systems passiert.
+
+        tasks:
+          # =================================================================
+          # TASK A — standard layout using the fixed fields
+          # Render order: requirement, snippet, steps, guiding_questions,
+          # hints, answers, done checkbox, bonus, trainer area
+          # =================================================================
+          - id: sys01-boot              # (required) stable ID, never change
+            number: "1.1"               # optional, default: auto (day.position)
+            title: Wie startet ein Linux-System?   # (required)
+            level: understand           # (required) key from "levels"
+            duration: 45m               # 30m | 1h | 1h30m — summed per day
+
+            requirement: |              # (markdown) the actual assignment
+              Unten stehen fünf Schritte in der falschen Reihenfolge. Bring sie
+              in die richtige Reihenfolge und schreibe zu jedem **einen Satz**.
+
+            snippet: |                  # monospace block, shown verbatim
+              A) UEFI/BIOS prüft die Hardware
+              B) Login-Prompt erscheint
+              C) Bootloader (GRUB) lädt den Kernel
+              D) systemd startet die Dienste
+              E) Kernel bindet das Root-Dateisystem ein
+
+            steps:                      # (markdown per item) numbered click path
+              - Terminal auf deiner Übungs-VM öffnen.
+              - "`systemd-analyze` ausführen und die Startzeit notieren."
+              - "`journalctl -b` öffnen und die ersten Zeilen lesen."
+
+            guiding_questions:          # (markdown per item) bullet list
+              - Warum braucht es überhaupt einen Bootloader?
+              - Was passiert, wenn ein Dienst beim Start fehlschlägt?
+
+            hints: |                    # (markdown) collapsible "Hilfestellung"
+              - **Denkhilfe:** Wer muss schon laufen, damit der nächste Schritt
+                starten kann?
+              - Suchbegriffe: „Linux Bootvorgang“, „systemd einfach erklärt“.
+
+            answers:                    # input fields; each one is saved per user
+              - id: order               # (required) unique within the task
+                type: text              # multi-line text area (default type)
+                label: "Richtige Reihenfolge + je ein Satz:"
+                placeholder: "1. Buchstabe ___ : hier passiert ..."
+                height: 150             # min height in px (text only)
+                monospace: false        # true = fixed-width font, e.g. for tables,
+                                        # protocols, command output (text/short only)
+
+              - id: hostname
+                type: short             # single-line input
+                label: "Hostname deiner Übungs-VM:"
+                placeholder: "z. B. azubi-lab-01"
+
+              - id: checked-items
+                type: checklist         # list of checkboxes
+                label: "Was hast du dir angesehen?"
+                items:
+                  - systemd-analyze
+                  - journalctl -b
+                  - systemctl status
+
+              - id: pid1
+                type: choice            # radio buttons or checkboxes
+                label: "Welches Programm läuft als Prozess mit der PID 1?"
+                multiple: false         # true = several options selectable
+                options:
+                  - systemd
+                  - bash
+                  - grub
+
+              - id: last-boot
+                type: date              # date picker
+                label: "Datum des letzten Neustarts:"
+
+            bonus: |                    # (markdown) collapsible "Extra" section
+              - Was ist der Unterschied zwischen BIOS und UEFI – und woran
+                erkennst du, womit deine VM startet?
+
+            trainer:                    # visible ONLY to trainers
+              expectations:             # (markdown per item) "Das sollte drinstehen"
+                - Reihenfolge A – C – E – D – B.
+                - Erkennt, dass systemd als *erster* Prozess alle weiteren Dienste startet.
+              notes: |                  # (markdown) internal notes, never shown to apprentices
+                Gut geeignet, um anschließend gemeinsam `systemctl` anzuschauen.
+
+          # =================================================================
+          # TASK B — free layout using "blocks"
+          # "blocks" replaces requirement, snippet, steps and
+          # guiding_questions (using both is a validation error).
+          # hints, answers, bonus and trainer work exactly as above.
+          # =================================================================
+          - id: sys01-ports
+            title: Ports und Dienste zuordnen
+            level: observe
+            duration: 30m
+            blocks:
+              - type: text              # (markdown) paragraph(s)
+                content: |
+                  Schau dir die Tabelle an und ergänze die fehlenden Einträge.
+
+              - type: table
+                caption: "Übersicht Standard-Ports"   # optional
+                columns: [Port, Dienst, Protokoll]
+                rows:
+                  - ["443", "HTTPS", "TCP"]
+                  - ["53", "DNS", "UDP/TCP"]
+                  - ["?", "SMTP", "TCP"]
+
+              - type: snippet
+                caption: "Beispielausgabe"            # optional
+                content: |
+                  $ ss -tlnp
+                  LISTEN 0 128 0.0.0.0:443 ...
+
+              - type: steps             # numbered list
+                items:
+                  - Terminal öffnen.
+                  - "`ss -tlnp` ausführen."
+
+              - type: questions         # bullet list of guiding questions
+                items:
+                  - Welche Ports sind offen?
+
+              - type: image
+                src: assets/example-workbook/topology.png   # relative to workbooks/
+                alt: Netzwerktopologie des Labors            # (required for images)
+                caption: "Abb. 1: Labor-Topologie"
+
+              - type: note
+                variant: warning        # info | warning
+                content: |
+                  Nur auf dem Lab-System arbeiten, nie in der Produktion.
+
+            answers:
+              - id: smtp-port
+                type: short
+                label: "Port für SMTP:"
+
+            trainer:
+              expectations:
+                - "SMTP: 25 (bzw. 587 für Submission)."
+
+  # ---------------------------------------------------------------------------
+  # An optional final day (rendered with an "OPT" badge)
+  # ---------------------------------------------------------------------------
+  - id: final
+    title: Abschlussprojekt
+    nav_label: Abschluss
+    nav_tag: OPT
+    optional: true
+    modules:
+      - code: PRJ-01
+        title: Abschluss
+        tasks:
+          - id: prj01-summary
+            title: Wochenrückblick
+            level: understand
+            duration: 30m
+            requirement: Fasse in eigenen Worten zusammen, was du gelernt hast.
+            answers:
+              - id: summary
+                label: "Dein Rückblick:"
+                height: 200

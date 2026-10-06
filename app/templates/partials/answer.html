@@ -1,0 +1,22 @@
+{% set fid = "a-" ~ task.id ~ "-" ~ answer.id %}
+<div class="answer answer-{{ answer.type }}" data-answer="{{ answer.id }}">
+  {% if answer.type in ('checklist', 'choice') %}
+  <fieldset>
+    {% if answer.label %}<legend class="micro-label">{{ answer.label }}</legend>{% endif %}
+    {% set multi = answer.type == 'checklist' or answer.multiple %}
+    {% for option in (answer.items if answer.type == 'checklist' else answer.options) %}
+    <label class="option">
+      <input type="{{ 'checkbox' if multi else 'radio' }}" name="{{ fid }}" value="{{ option }}">
+      <span>{{ option }}</span>
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% else %}
+  {% if answer.label %}<label class="micro-label" for="{{ fid }}">{{ answer.label }}</label>{% endif %}
+  {% if answer.type == 'text' %}
+  <textarea id="{{ fid }}" rows="{{ answer.height | textarea_rows }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}></textarea>
+  {% else %}
+  <input id="{{ fid }}" type="{{ 'date' if answer.type == 'date' else 'text' }}"{% if answer.placeholder %} placeholder="{{ answer.placeholder }}"{% endif %}>
+  {% endif %}
+  {% endif %}
+</div>

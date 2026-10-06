@@ -1,0 +1,26 @@
+/* Design tokens. The ONLY place in the stylesheets where colors are defined.
+   Per-workbook overrides (theme.css) redefine a subset of these properties. */
+:root {
+  --paper: #F4F6F8;
+  --card: #FFFFFF;
+  --ink: #1A2433;
+  --muted: #5B6878;
+  --line: #D6DCE3;
+  --accent: #1B365D;
+  --accent-hover: color-mix(in srgb, var(--accent) 75%, black);
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, white);
+  --ok: #1F7A4D;
+  --redo: #B5541C;
+  --hint-bg: #EEF3F9;
+  --trainer-bg: #FAF5EA;
+  --bonus-bg: #F3F4F7;
+  --level-blue: #2F5D8A;
+  --level-ochre: #9A6A12;
+  --level-green: #2E7D52;
+  --level-grey: #5B6878;
+  --level-red: #A8432A;
+
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --radius: 3px;
+}

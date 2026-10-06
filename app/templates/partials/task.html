@@ -1,0 +1,75 @@
+{% set task = tv.task %}
+{% set level = wb.catalog.levels.get(task.level) %}
+<article class="task" id="task-{{ task.id }}" data-task="{{ task.id }}" data-hash="{{ tv.hash }}">
+  <div class="task-head">
+    <span class="task-number">{{ tv.number }}</span>
+    <h4 class="task-title">{{ task.title }}</h4>
+    {% if level %}<span class="level level-{{ level.color }}"{% if level.description %} title="{{ level.description }}"{% endif %}>{{ level.label }}</span>{% endif %}
+    {% if tv.minutes %}<span class="duration">{{ t('task.duration', minutes=tv.minutes) }}</span>{% endif %}
+  </div>
+
+  {% if task.blocks is not none %}
+  {% for block in task.blocks %}
+  {% include "partials/block.html" %}
+  {% endfor %}
+  {% else %}
+  {% if task.requirement %}
+  <div class="requirement prose"><span class="micro-label">{{ t('task.requirement') }}</span>{{ task.requirement | md }}</div>
+  {% endif %}
+  {% if task.snippet %}<pre class="snippet">{{ task.snippet }}</pre>{% endif %}
+  {% if task.steps %}
+  <ol class="steps">{% for item in task.steps %}<li>{{ item | md_inline }}</li>{% endfor %}</ol>
+  {% endif %}
+  {% if task.guiding_questions %}
+  <ul class="questions">{% for item in task.guiding_questions %}<li>{{ item | md_inline }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% endif %}
+
+  {% if task.hints %}
+  <details class="hints">
+    <summary>{{ icon('chevron-right') }}{{ icon('lightbulb') }}<span>{{ t('task.hints') }}</span></summary>
+    <div class="details-body prose">{{ task.hints | md }}</div>
+  </details>
+  {% endif %}
+
+  {% for answer in task.answers %}
+  {% include "partials/answer.html" %}
+  {% endfor %}
+
+  <div class="done-row">
+    <input type="checkbox" id="done-{{ task.id }}" data-done>
+    <label for="done-{{ task.id }}">{{ t('task.mark_done') }}</label>
+  </div>
+
+  {% if task.bonus %}
+  <details class="bonus">
+    <summary>{{ icon('chevron-right') }}{{ icon('plus') }}<span>{{ t('task.bonus') }}</span></summary>
+    <div class="details-body prose">{{ task.bonus | md }}</div>
+  </details>
+  {% endif %}
+
+  {% if is_trainer %}
+  <div class="trainer">
+    <div class="micro-label trainer-head">{{ t('trainer.heading') }}</div>
+    {% if task.trainer and task.trainer.expectations %}
+    <div class="trainer-expect">
+      <strong>{{ t('trainer.expectations') }}</strong>
+      <ul>{% for item in task.trainer.expectations %}<li>{{ item | md_inline }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if task.trainer and task.trainer.notes %}
+    <div class="trainer-notes prose"><strong>{{ t('trainer.notes') }}</strong>{{ task.trainer.notes | md }}</div>
+    {% endif %}
+    <div class="trainer-row">
+      <label class="visually-hidden" for="status-{{ task.id }}">{{ t('trainer.status') }}</label>
+      <select id="status-{{ task.id }}" data-review-status>
+        <option value="">{{ t('trainer.status_none') }}</option>
+        <option value="ok">{{ t('trainer.status_ok') }}</option>
+        <option value="redo">{{ t('trainer.status_redo') }}</option>
+      </select>
+      <label class="visually-hidden" for="comment-{{ task.id }}">{{ t('trainer.comment') }}</label>
+      <textarea id="comment-{{ task.id }}" data-review-comment rows="2" placeholder="{{ t('trainer.comment_placeholder') }}"></textarea>
+    </div>
+  </div>
+  {% endif %}
+</article>

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Runtime data (never commit)
+config.yaml
+progress/
+data/
+users.yaml
+
+# Local artifacts not part of the project
+*.deb
+files.zip
+*.html.out
