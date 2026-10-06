@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 _ID_RE = re.compile(ID_PATTERN)
 MAX_ANSWER_CHARS = 20_000
 MAX_REQUEST_BYTES = 1_000_000
+MAX_COMMENT_CHARS = 5_000
 
 
 class InvalidInput(ValueError):
@@ -171,6 +172,23 @@ def needs_check(tp) -> bool:
     if review is None or review.status is None or review.reviewed_at is None:
         return True
     return bool(tp.updated_at and tp.updated_at > review.reviewed_at)
+
+
+def last_comment_role(tp) -> str | None:
+    """Role of whoever wrote the last message in the task's thread (None if empty)."""
+    if tp is None or not tp.comments:
+        return None
+    return tp.comments[-1].role
+
+
+def open_question(tp) -> bool:
+    """Open question ("Rückfrage offen"): the last message is from the apprentice."""
+    return last_comment_role(tp) == "apprentice"
+
+
+def needs_attention(tp) -> bool:
+    """Something for the Fachbetreuer to do: a check or an open question."""
+    return needs_check(tp) or open_question(tp)
 
 
 def orphaned_answers(catalog: Catalog, progress: Progress) -> list[tuple[str, str, AnswerValue]]:

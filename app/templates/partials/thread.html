@@ -1,0 +1,26 @@
+{# Question/answer thread of one task. Needs: task, tv, tp, thread_url (none = read-only), names. #}
+{% set nm = names or {} %}
+{% set comments = tp.comments if tp else [] %}
+{% if comments or thread_url %}
+<details class="thread{% if comments %} has-comments{% endif %}" data-thread{% if thread_url %} data-thread-url="{{ thread_url }}"{% endif %}{% if comments or export %} open{% endif %}>
+  <summary>{{ icon('chevron-right') }}{{ icon('message-square') }}<span>{{ t('comments.heading') }}</span><span class="thread-count" data-thread-count>{{ comments | length if comments else '' }}</span></summary>
+  <div class="details-body">
+    <ol class="thread-list" data-thread-list{% if not comments %} hidden{% endif %}>
+      {% for c in comments %}
+      <li class="thread-item thread-from-{{ c.role }}">
+        <p class="thread-meta"><strong>{{ nm.get(c.author, c.author) }}</strong>{% if c.role == 'trainer' %} <span class="thread-role">{{ t('comments.role_trainer') }}</span>{% endif %} · <time datetime="{{ c.at.isoformat() }}">{{ c.at | de_datetime }}</time></p>
+        <p class="thread-text">{{ c.text }}</p>
+      </li>
+      {% endfor %}
+    </ol>
+    {% if thread_url %}
+    <div class="thread-form">
+      <label class="visually-hidden" for="thread-{{ task.id }}">{{ t('comments.label', number=tv.number) }}</label>
+      <textarea id="thread-{{ task.id }}" data-thread-text rows="2" maxlength="5000" placeholder="{{ t('comments.placeholder') }}"></textarea>
+      <button type="button" class="button button-quiet" data-thread-send>{{ t('comments.send') }}<span class="visually-hidden"> ({{ tv.number }})</span></button>
+      <p class="thread-error" data-thread-error role="alert" hidden></p>
+    </div>
+    {% endif %}
+  </div>
+</details>
+{% endif %}

@@ -40,7 +40,10 @@
             <a href="{{ r.link }}">{{ r.title }}</a> <span class="mono muted">{{ r.module }}</span>
             {% if r.comment %}<p class="row-comment">{{ r.comment }}</p>{% endif %}
           </td>
-          <td><span class="state state-{{ r.state }}">{{ r.state_label }}</span></td>
+          <td>
+            <span class="state state-{{ r.state }}">{{ r.state_label }}</span>
+            {% if identity.is_trainer and r.last_comment == 'apprentice' %}<span class="state state-question" title="{{ t('comments.badge_question_hint') }}">{{ t('comments.badge_question') }}</span>{% elif not identity.is_trainer and r.last_comment == 'trainer' %}<span class="state state-answer" title="{{ t('comments.badge_answer_hint') }}">{{ t('comments.badge_answer') }}</span>{% endif %}
+          </td>
           <td class="mono">{{ r.done_at | de_date }}</td>
           <td>{{ r.supervisor or t('my_tasks.no_supervisor') }}</td>
         </tr>

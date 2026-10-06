@@ -18,7 +18,8 @@ from app.models.catalog import ID_PATTERN, is_safe_asset_path
 from app.models.users import User
 from app.progress import (
     TASK_STATES,
-    needs_check,
+    last_comment_role,
+    needs_attention,
     orphaned_answers,
     responsible_tasks,
     task_state,
@@ -63,7 +64,7 @@ class Assignment:
     pv: ProgressView
     tasks: list[str]  # responsible task ids
     partial: bool
-    open_checks: int
+    open_checks: int  # tasks to check plus open questions
     numbers: list[str]
 
 
@@ -94,7 +95,7 @@ def assignments_for(request: Request, trainer: str) -> list[Assignment]:
                     pv=pv,
                     tasks=mine,
                     partial=len(mine) < len(task_ids),
-                    open_checks=sum(needs_check(progress.tasks.get(tid)) for tid in mine),
+                    open_checks=sum(needs_attention(progress.tasks.get(tid)) for tid in mine),
                     numbers=[view.tasks_by_id[tid].number for tid in mine],
                 )
             )
@@ -118,6 +119,11 @@ def index(request: Request, identity: CurrentUser) -> HTMLResponse:
     return render(request, "index.html", entries=entries, assignments=assignments)
 
 
+def display_names(request: Request) -> dict[str, str]:
+    """username -> display name, for authors of messages and reviews."""
+    return {name: u.name for name, u in request.app.state.users.all().items()}
+
+
 @router.get("/workbooks/{workbook_id}", response_class=HTMLResponse)
 def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLResponse:
     view = get_view(request, workbook_id, identity)
@@ -133,6 +139,7 @@ def workbook(request: Request, workbook_id: str, identity: CurrentUser) -> HTMLR
         static=False,
         asset_url=asset_url,
         pv=build_progress_view(view, progress, editable=apprentice),
+        names=display_names(request),
     )
 
 
@@ -145,8 +152,7 @@ def review(request: Request, workbook_id: str, username: str, identity: CurrentU
     if user is None or user.role != "apprentice" or not user.may_open(workbook_id):
         raise HTTPException(status_code=404)
     progress = request.app.state.progress.load(workbook_id, username)
-    users = request.app.state.users.all()
-    names = {name: u.name for name, u in users.items()}
+    names = display_names(request)
     supervisors = {}
     for tid in view.tasks_by_id:
         sup = user.supervisor_for(workbook_id, tid)
@@ -168,6 +174,7 @@ def review(request: Request, workbook_id: str, username: str, identity: CurrentU
         asset_url=asset_url,
         pv=build_progress_view(view, progress, editable=False),
         review=context,
+        names=names,
     )
 
 
@@ -217,8 +224,8 @@ def export(request: Request, workbook_id: str, identity: CurrentUser, user: str 
         username, display = identity.username, identity.user.name
 
     progress = request.app.state.progress.load(workbook_id, username) if username else None
+    names = display_names(request)
     if identity.is_trainer and username:
-        names = {name: u.name for name, u in users.all().items()}
         target = users.get(username)
         supervisors = {}
         for tid in view.tasks_by_id:
@@ -242,6 +249,7 @@ def export(request: Request, workbook_id: str, identity: CurrentUser, user: str 
         export=ExportInfo(name=display, username=username or "", exported_at=now),
         review=review,
         view=view,
+        names=names,
     )
     filename = f"arbeitsheft_{workbook_id}_{username or 'leer'}_{now:%Y-%m-%d}.html"
     return HTMLResponse(
@@ -269,6 +277,7 @@ class TaskRow:
     supervisor_id: str  # username, "" when nobody is assigned
     comment: str
     link: str
+    last_comment: str | None  # role of the last thread message ("apprentice"/"trainer")
 
 
 @dataclass
@@ -314,12 +323,14 @@ def _rows(request, view, progress, user, username_for_link, task_ids=None) -> li
                         supervisor_id=sup or "",
                         comment=tp.review.comment if tp and tp.review else "",
                         link=f"{base}#task-{tv.task.id}",
+                        last_comment=last_comment_role(tp),
                     )
                 )
     return rows
 
 
-# Filter -> task states shown. "open" means "work to do" for the role.
+# Filter -> task states shown. "open" means "work to do" for the role; for the
+# Fachbetreuer it also includes tasks with an open question (see my_tasks()).
 TASK_FILTERS = {
     "apprentice": {"open": {"open", "redo"}, "ok": {"ok"}, "redo": {"redo"}},
     "trainer": {"open": {"waiting", "recheck"}, "ok": {"ok"}, "redo": {"redo"}},
@@ -443,9 +454,14 @@ def my_tasks(
             )
 
     filtered = bool(states or sup)
+    questions = identity.is_trainer and active == "open"
     for g in groups:
         if states:
-            g.rows = [r for r in g.rows if r.state in states]
+            g.rows = [
+                r
+                for r in g.rows
+                if r.state in states or (questions and r.last_comment == "apprentice")
+            ]
         if sup:
             wanted = "" if sup == NO_SUPERVISOR else sup
             g.rows = [r for r in g.rows if r.supervisor_id == wanted]

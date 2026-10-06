@@ -165,7 +165,15 @@ users:
       "task_hash": "sha256...",
       "updated_at": "2026-10-06T10:12:00Z",
       "review": { "status": "ok", "comment": "Sauber!",
-                  "reviewed_by": "mmustermann", "reviewed_at": "2026-10-06T15:00:00Z" }
+                  "reviewed_by": "mmustermann", "reviewed_at": "2026-10-06T15:00:00Z" },
+      "review_history": [
+        { "status": "redo", "comment": "Bitte Kette ergänzen",
+          "reviewed_by": "mmustermann", "reviewed_at": "2026-10-06T11:00:00Z" } ],
+      "comments": [
+        { "author": "mmueller", "role": "apprentice", "text": "Welche Kette ist gemeint?",
+          "at": "2026-10-06T11:30:00Z" },
+        { "author": "mmustermann", "role": "trainer", "text": "Die Zertifikatskette.",
+          "at": "2026-10-06T12:00:00Z" } ]
     }
   },
   "signoff": { "comment": "", "date": null, "by": null }
@@ -180,7 +188,23 @@ users:
   hash differs, show the German hint "Diese Aufgabe wurde geändert, nachdem du
   sie bearbeitet hast."
 - Write access is split: apprentice endpoints may only touch `header`,
-  `answers`, `done`; trainer endpoints may only touch `review` and `signoff`.
+  `answers`, `done`; trainer endpoints may only touch `review` (incl.
+  `review_history`) and `signoff`. Both roles may **append** to a task's
+  `comments` (question/answer thread, "Rückfragen"): apprentices only to their
+  own progress, Fachbetreuer to any apprentice they may review. `author` and
+  `role` come from the session; messages are never edited or deleted. Text is
+  trimmed, 1–5 000 characters.
+- Review history: when a Fachbetreuer saves a review whose status or comment
+  differs from the current one, the previous review is appended to
+  `review_history` before it is replaced (clearing a review keeps it too).
+  Autosaved comment edits by the same Fachbetreuer with an unchanged status
+  within 10 minutes continue the current review instead of adding entries.
+- A task whose last message is from the apprentice counts as "Rückfrage offen":
+  Fachbetreuer see it in "Nur zu prüfen" (`/my-tasks?filter=open`) with a badge,
+  and it counts as "zu prüfen" under "Meine Azubis". When the last message is
+  from a Fachbetreuer, the apprentice sees an "Antwort" badge in `/my-tasks`.
+- `review_history` and `comments` default to empty lists, so older progress
+  files load unchanged.
 - Size limits: 20 000 characters per answer, 1 MB per request.
 
 ### Autosave (frontend)
@@ -231,6 +255,11 @@ JSON API (all require session + `X-Workbook: 1` + same `Origin`):
 - `PATCH /api/progress/{workbook_id}/tasks/{task_id}` — `{answers?, done?}`
 - `PATCH /api/progress/{workbook_id}/users/{username}/tasks/{task_id}/review` — trainer
 - `PATCH /api/progress/{workbook_id}/users/{username}/signoff` — trainer
+- `POST /api/progress/{workbook_id}/tasks/{task_id}/comments` — apprentice,
+  `{text}`; appends to the own thread, returns the stored message
+- `POST /api/progress/{workbook_id}/users/{username}/tasks/{task_id}/comments`
+  — trainer, `{text}`; appends to that apprentice's thread (same access checks
+  as the review endpoint)
 - `GET /events` — SSE catalog change notifications (phase 2, optional)
 
 All `/admin/*` and trainer endpoints → 403 for apprentices.
