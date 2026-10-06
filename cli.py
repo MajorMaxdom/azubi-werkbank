@@ -74,5 +74,41 @@ def render(
     typer.echo(f"Wrote {output}")
 
 
+@app.command()
+def serve(
+    config: Path | None = typer.Option(
+        None, "--config", "-c", help="Config file (default: $WORKBOOK_CONFIG or ./config.yaml)."
+    ),
+) -> None:
+    """Run the web server (uvicorn) with the configured host and port."""
+    import logging
+
+    import uvicorn
+
+    from app.config import load_config
+    from app.main import create_app
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+    settings = load_config(config)
+    web_app = create_app(settings)
+
+    class Server(uvicorn.Server):
+        def handle_exit(self, sig, frame) -> None:
+            # End open SSE streams first; uvicorn waits for open responses on shutdown.
+            web_app.state.broadcaster.close()
+            super().handle_exit(sig, frame)
+
+    Server(
+        uvicorn.Config(
+            web_app,
+            host=settings.listen_host,
+            port=settings.listen_port,
+            proxy_headers=True,
+            forwarded_allow_ips="127.0.0.1",
+            timeout_graceful_shutdown=5,
+        )
+    ).run()
+
+
 if __name__ == "__main__":
     app()

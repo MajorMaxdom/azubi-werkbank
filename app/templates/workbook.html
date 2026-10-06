@@ -8,6 +8,12 @@
 {% block body_class %}{{ 'workbook is-trainer' if is_trainer else 'workbook' }}{% endblock %}
 {% block body %}
 <div class="sticky-head">
+  {% if not static %}
+  <div class="update-banner" data-update-banner hidden>
+    <span>{{ t('events.updated') }}</span>
+    <button type="button" class="link-button" data-reload>{{ t('events.reload') }}</button>
+  </div>
+  {% endif %}
   <header class="topbar">
     {% if wb.meta.brand %}<span class="brand">{{ wb.meta.brand }}</span>{% endif %}
     <div class="progress" data-progress>
@@ -23,7 +29,7 @@
   </nav>
 </div>
 
-<main class="sheet">
+<main class="sheet" data-workbook="{{ wb.meta.id }}">
   <header class="doc-head">
     <h1>{{ wb.meta.title }}</h1>
     {% if wb.meta.subtitle %}<p class="doc-sub">{{ wb.meta.subtitle }}</p>{% endif %}
@@ -79,4 +85,5 @@
 
   {% if wb.meta.footer %}<footer class="doc-foot">{{ wb.meta.footer }}</footer>{% endif %}
 </main>
+{% if not static %}<script src="/static/js/events.js" defer></script>{% endif %}
 {% endblock %}

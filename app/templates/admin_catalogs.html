@@ -1,0 +1,59 @@
+{% extends "page.html" %}
+{% block title %}{{ t('admin.catalogs.title') }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('admin.catalogs.heading') }}</h1>
+<p class="page-intro">{{ t('admin.catalogs.intro') }}</p>
+{% if rows %}
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ t('admin.catalogs.file') }}</th>
+        <th scope="col">{{ t('admin.catalogs.workbook') }}</th>
+        <th scope="col">{{ t('admin.catalogs.version') }}</th>
+        <th scope="col">{{ t('admin.catalogs.status') }}</th>
+        <th scope="col">{{ t('admin.catalogs.loaded_at') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      {% set cat = row.entry.catalog %}
+      <tr class="row-{{ row.status }}">
+        <td class="mono">{{ row.entry.path.name }}</td>
+        <td>{% if cat %}<span class="mono">{{ cat.workbook.id }}</span><br>{{ cat.workbook.title }}{% else %}{{ t('admin.catalogs.never') }}{% endif %}</td>
+        <td class="mono">{{ cat.workbook.version if cat else t('admin.catalogs.never') }}</td>
+        <td><span class="status status-{{ row.status }}">{{ row.status_label }}</span></td>
+        <td class="mono">{{ row.entry.loaded_at.astimezone().strftime('%d.%m.%Y %H:%M:%S') if row.entry.loaded_at else t('admin.catalogs.never') }}</td>
+      </tr>
+      {% if row.errors or row.warnings %}
+      <tr class="row-detail">
+        <td colspan="5">
+          {% if row.errors %}
+          <span class="micro-label">{{ t('admin.catalogs.errors') }}</span>
+          <ul class="issue-list">
+            {% for error, message in row.errors %}
+            <li class="issue issue-error">
+              {% if error.path %}<code>{{ error.path }}</code>{% endif %}
+              {% if error.line %}<span class="mono issue-line">{{ t('admin.catalogs.line', line=error.line) }}</span>{% endif %}
+              <span>{{ message }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          {% if row.warnings %}
+          <span class="micro-label">{{ t('admin.catalogs.warnings') }}</span>
+          <ul class="issue-list">
+            {% for warning in row.warnings %}<li class="issue issue-warning"><span>{{ warning }}</span></li>{% endfor %}
+          </ul>
+          {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">{{ t('admin.catalogs.empty') }}</p>
+{% endif %}
+{% endblock %}

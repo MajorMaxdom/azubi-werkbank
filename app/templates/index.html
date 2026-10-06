@@ -1,0 +1,22 @@
+{% extends "page.html" %}
+{% block title %}{{ t('index.title') }}{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ t('index.heading') }}</h1>
+{% if workbooks %}
+<ul class="card-list">
+  {% for wb in workbooks %}
+  <li class="card">
+    <div class="card-meta">
+      {% if wb.meta.brand %}<span class="micro-label">{{ wb.meta.brand }}</span>{% endif %}
+      <span class="micro-label">{{ t('index.version', version=wb.meta.version) }} · {{ t('index.tasks', count=wb.task_count) }}</span>
+    </div>
+    <h2 class="card-title"><a href="/workbooks/{{ wb.meta.id }}">{{ wb.meta.title }}</a></h2>
+    {% if wb.meta.subtitle %}<p class="card-sub">{{ wb.meta.subtitle }}</p>{% endif %}
+    {% if wb.meta.description %}<p class="card-desc">{{ wb.meta.description }}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">{{ t('index.empty') }}</p>
+{% endif %}
+{% endblock %}

@@ -49,3 +49,83 @@ signoff:
   date: Geprüft am
   by: Geprüft durch
   by_placeholder: Name Ausbilder/in
+
+app:
+  name: Arbeitshefte
+
+events:
+  updated: Dieses Heft wurde aktualisiert –
+  reload: neu laden
+
+index:
+  title: Arbeitshefte
+  heading: Deine Arbeitshefte
+  empty: Es sind noch keine Arbeitshefte vorhanden.
+  tasks:
+    one: "{count} Aufgabe"
+    other: "{count} Aufgaben"
+  version: "Version {version}"
+  open: Öffnen
+
+admin:
+  catalogs:
+    title: Kataloge
+    heading: Geladene Kataloge
+    intro: Neue und geänderte Dateien im Verzeichnis „workbooks“ werden automatisch übernommen. Eine fehlerhafte Datei behält ihre letzte gültige Version.
+    empty: Im Verzeichnis „workbooks“ liegen keine Katalogdateien.
+    file: Datei
+    workbook: Heft
+    version: Version
+    status: Status
+    loaded_at: Geladen
+    status_ok: OK
+    status_error: Fehler
+    status_stale: Fehler – letzte gültige Version aktiv
+    errors: Fehler
+    warnings: Warnungen
+    line: "Zeile {line}"
+    contrast: "Geringer Kontrast {ratio}:1 (mindestens 4,5:1): {foreground} auf {background}"
+    never: —
+
+errors:
+  generic: "Ungültiger Wert ({message})"
+  missing: Pflichtfeld fehlt.
+  extra_forbidden: Unbekannter Schlüssel – Tippfehler?
+  string_type: Text erwartet (Zahlen ggf. in Anführungszeichen setzen).
+  int_type: Ganze Zahl erwartet.
+  int_parsing: Ganze Zahl erwartet.
+  bool_type: true oder false erwartet.
+  bool_parsing: true oder false erwartet.
+  list_type: Liste erwartet.
+  dict_type: Abschnitt mit Schlüsseln erwartet.
+  model_type: Abschnitt mit Schlüsseln erwartet.
+  model_attributes_type: Abschnitt mit Schlüsseln erwartet.
+  literal_error: "Ungültiger Wert. Erlaubt: {expected}."
+  string_too_short: Darf nicht leer sein.
+  too_short: Darf nicht leer sein.
+  greater_than: "Muss größer als {gt} sein."
+  less_than_equal: "Darf höchstens {le} sein."
+  union_tag_invalid: "Unbekannter Blocktyp „{tag}“. Erlaubt: {expected_tags}."
+  union_tag_not_found: Feld „type“ fehlt.
+  string_pattern_mismatch:
+    id: Ungültige ID – erlaubt sind a–z, 0–9 und „-“, Beginn mit Buchstabe oder Ziffer, höchstens 63 Zeichen.
+    duration: Ungültige Dauer – erlaubt sind z. B. 30m, 1h oder 1h30m.
+    version: Keine gültige Versionsnummer (Semantic Versioning, z. B. 1.0.0).
+    color: Keine gültige Farbe – erlaubt sind nur Hex-Werte wie "#1B365D".
+    other: Ungültiges Format.
+  duplicate_id: "{kind} „{id}“ ist doppelt vergeben."
+  unknown_level: "Unbekannte Stufe „{level}“. Definiert: {defined}."
+  blocks_exclusive: "„blocks“ kann nicht zusammen mit {fields} verwendet werden."
+  choice_options: Antworttyp „choice“ braucht „options“.
+  checklist_items: Antworttyp „checklist“ braucht „items“.
+  asset_path: "Bildpfad „{src}“ muss innerhalb von workbooks/assets/ liegen."
+  color_null: "Farbe „{key}“ ist leer – Hex-Farben in YAML in Anführungszeichen setzen, z. B. \"#1B365D\"."
+  parse_error: "Syntaxfehler: {message}"
+  read_error: "Datei kann nicht gelesen werden: {message}"
+  duplicate_workbook: "Die Heft-ID „{id}“ wird bereits von {file} verwendet."
+  kind:
+    day: Tag-ID
+    task: Aufgaben-ID
+    answer: Antwort-ID
+    header field: Kopffeld-ID
+    module code: Modulcode

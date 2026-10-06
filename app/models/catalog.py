@@ -309,6 +309,7 @@ class ReferenceIssue(BaseModel):
     loc: tuple[str | int, ...]
     type: str
     message: str
+    ctx: dict[str, str] = {}
 
 
 def check_references(catalog: Catalog) -> list[ReferenceIssue]:
@@ -333,16 +334,22 @@ def check_references(catalog: Catalog) -> list[ReferenceIssue]:
                     issues.append(_dup((*tloc, "id"), "task", task.id))
                 task_ids.add(task.id)
                 if task.level not in catalog.levels:
+                    defined = ", ".join(catalog.levels)
                     issues.append(
                         ReferenceIssue(
                             loc=(*tloc, "level"),
                             type="unknown_level",
-                            message=f"Unknown level '{task.level}' "
-                            f"(defined: {', '.join(catalog.levels)})",
+                            message=f"Unknown level '{task.level}' (defined: {defined})",
+                            ctx={"level": task.level, "defined": defined},
                         )
                     )
     return issues
 
 
 def _dup(loc: tuple[str | int, ...], kind: str, value: str) -> ReferenceIssue:
-    return ReferenceIssue(loc=loc, type="duplicate_id", message=f"Duplicate {kind} id '{value}'")
+    return ReferenceIssue(
+        loc=loc,
+        type="duplicate_id",
+        message=f"Duplicate {kind} id '{value}'",
+        ctx={"kind": kind, "id": value},
+    )

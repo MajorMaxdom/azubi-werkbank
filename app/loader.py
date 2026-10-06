@@ -1,13 +1,20 @@
-"""Parse and validate catalog files.
+"""Parse and validate catalog files; in-memory registry with hot reload.
 
-Phase 0.1.0 provides file/directory loading for the CLI. The registry and the
-file watcher are added in 0.2.0 on top of these functions.
+Each catalog file has a registry entry holding its last valid catalog and its
+current errors. A broken file keeps serving its last valid version. Workbook
+ids must be unique across files; on conflict the file that sorts first by
+name wins.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
+import threading
+from collections.abc import AsyncIterator, Callable, Iterable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,8 +22,13 @@ from pydantic import ValidationError
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml.error import MarkedYAMLError
+from watchfiles import Change, awatch
 
+from app.i18n import Translator
 from app.models.catalog import Catalog, check_references
+from app.renderer import WorkbookView, build_view
+
+log = logging.getLogger(__name__)
 
 CATALOG_SUFFIXES = (".yaml", ".yml", ".json")
 
@@ -28,6 +40,7 @@ class CatalogError:
     type: str
     message: str
     line: int | None = None
+    ctx: dict[str, str] = field(default_factory=dict)
 
     @property
     def path(self) -> str:
@@ -98,14 +111,16 @@ def load_file(path: Path) -> LoadResult:
     except ValidationError as exc:
         for err in exc.errors(include_url=False):
             loc = tuple(err["loc"])
+            ctx = {k: str(v) for k, v in (err.get("ctx") or {}).items()}
             result.errors.append(
-                CatalogError(name, loc, err["type"], err["msg"], find_line(raw, loc))
+                CatalogError(name, loc, err["type"], err["msg"], find_line(raw, loc), ctx)
             )
         return result
 
     for issue in check_references(catalog):
+        line = find_line(raw, issue.loc)
         result.errors.append(
-            CatalogError(name, issue.loc, issue.type, issue.message, find_line(raw, issue.loc))
+            CatalogError(name, issue.loc, issue.type, issue.message, line, dict(issue.ctx))
         )
     if not result.errors:
         result.catalog = catalog
@@ -134,6 +149,7 @@ def load_directory(directory: Path) -> tuple[dict[str, Catalog], list[LoadResult
                         ("workbook", "id"),
                         "duplicate_workbook",
                         f"Workbook id '{wid}' is already used by {owners[wid].name}",
+                        ctx={"id": wid, "file": owners[wid].name},
                     )
                 )
                 result.catalog = None
@@ -174,3 +190,170 @@ def find_line(root: Any, loc: tuple[str | int, ...]) -> int | None:
             node = node[part]
         # Other parts (e.g. union tags like "image") do not exist in the data: skip.
     return line
+
+
+# --------------------------------------------------------------------------- registry
+
+
+@dataclass
+class Entry:
+    path: Path
+    catalog: Catalog | None = None  # last valid version
+    errors: list[CatalogError] = field(default_factory=list)
+    loaded_at: datetime | None = None  # when `catalog` was last replaced
+    checked_at: datetime | None = None  # when the file was last parsed
+    conflict: CatalogError | None = None  # duplicate workbook id across files
+
+    @property
+    def all_errors(self) -> list[CatalogError]:
+        return [*self.errors, *([self.conflict] if self.conflict else [])]
+
+    @property
+    def workbook_id(self) -> str | None:
+        return self.catalog.workbook.id if self.catalog else None
+
+
+class Registry:
+    def __init__(self, directory: Path, translator: Translator | None = None) -> None:
+        self.directory = directory
+        self._translator = translator
+        self._entries: dict[Path, Entry] = {}
+        self._by_id: dict[str, Entry] = {}
+        self._views: dict[str, WorkbookView] = {}
+        self._lock = threading.RLock()
+        self._listeners: list[Callable[[set[str]], None]] = []
+
+    # ------------------------------------------------------------------ queries
+
+    def entries(self) -> list[Entry]:
+        with self._lock:
+            return [self._entries[p] for p in sorted(self._entries)]
+
+    def catalogs(self) -> dict[str, Catalog]:
+        with self._lock:
+            return {wid: e.catalog for wid, e in sorted(self._by_id.items()) if e.catalog}
+
+    def get(self, workbook_id: str) -> Catalog | None:
+        with self._lock:
+            entry = self._by_id.get(workbook_id)
+            return entry.catalog if entry else None
+
+    def view(self, workbook_id: str) -> WorkbookView | None:
+        with self._lock:
+            catalog = self.get(workbook_id)
+            if catalog is None:
+                return None
+            view = self._views.get(workbook_id)
+            if view is None or view.catalog is not catalog:
+                view = build_view(catalog, self._translator)
+                self._views[workbook_id] = view
+            return view
+
+    # ------------------------------------------------------------------ updates
+
+    def on_change(self, listener: Callable[[set[str]], None]) -> None:
+        """Register a callback receiving the set of changed workbook ids."""
+        self._listeners.append(listener)
+
+    def load_all(self) -> None:
+        with self._lock:
+            before = self._snapshot()
+            self._entries.clear()
+            if self.directory.is_dir():
+                for path in self.directory.iterdir():
+                    if path.is_file() and is_catalog_file(path):
+                        self._reload(path)
+            self._reindex()
+            changed = self._diff(before)
+        self._notify(changed)
+
+    def apply_changes(self, paths: Iterable[Path]) -> set[str]:
+        """Reload or remove the given files. Returns the changed workbook ids."""
+        with self._lock:
+            before = self._snapshot()
+            for path in paths:
+                if not is_catalog_file(path) or path.parent.resolve() != self.directory.resolve():
+                    continue
+                key = self._key(path)
+                if path.is_file():
+                    self._reload(key)
+                elif key in self._entries:
+                    log.info("catalog.removed file=%s", key.name)
+                    del self._entries[key]
+            self._reindex()
+            changed = self._diff(before)
+        self._notify(changed)
+        return changed
+
+    def _key(self, path: Path) -> Path:
+        return self.directory / path.name
+
+    def _reload(self, path: Path) -> None:
+        key = self._key(path)
+        entry = self._entries.setdefault(key, Entry(path=key))
+        result = load_file(key)
+        now = datetime.now(UTC)
+        entry.checked_at = now
+        entry.errors = result.errors
+        if result.catalog is not None:
+            entry.catalog = result.catalog
+            entry.loaded_at = now
+            log.info("catalog.loaded file=%s id=%s", key.name, result.catalog.workbook.id)
+        else:
+            log.warning(
+                "catalog.invalid file=%s errors=%d kept_previous=%s",
+                key.name,
+                len(result.errors),
+                entry.catalog is not None,
+            )
+
+    def _reindex(self) -> None:
+        by_id: dict[str, Entry] = {}
+        for path in sorted(self._entries):
+            entry = self._entries[path]
+            entry.conflict = None
+            wid = entry.workbook_id
+            if wid is None:
+                continue
+            if wid in by_id:
+                entry.conflict = CatalogError(
+                    str(path),
+                    ("workbook", "id"),
+                    "duplicate_workbook",
+                    f"Workbook id '{wid}' is already used by {by_id[wid].path.name}",
+                    ctx={"id": wid, "file": by_id[wid].path.name},
+                )
+                continue
+            by_id[wid] = entry
+        self._by_id = by_id
+        self._views = {k: v for k, v in self._views.items() if k in by_id}
+
+    def _snapshot(self) -> dict[str, Catalog]:
+        return {wid: e.catalog for wid, e in self._by_id.items() if e.catalog}
+
+    def _diff(self, before: dict[str, Catalog]) -> set[str]:
+        after = self._snapshot()
+        return {
+            wid for wid in before.keys() | after.keys() if before.get(wid) is not after.get(wid)
+        }
+
+    def _notify(self, changed: set[str]) -> None:
+        if not changed:
+            return
+        for listener in self._listeners:
+            try:
+                listener(changed)
+            except Exception:
+                log.exception("registry listener failed")
+
+    # ------------------------------------------------------------------ watching
+
+    async def watch(self, stop_event: asyncio.Event | None = None, debounce: int = 400) -> None:
+        """Watch the directory and apply changes until ``stop_event`` is set."""
+        self.directory.mkdir(parents=True, exist_ok=True)
+        changes: AsyncIterator[set[tuple[Change, str]]] = awatch(
+            self.directory, stop_event=stop_event, debounce=debounce, recursive=False
+        )
+        async for batch in changes:
+            paths = {Path(p) for _, p in batch}
+            await asyncio.to_thread(self.apply_changes, paths)

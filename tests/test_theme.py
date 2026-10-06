@@ -6,7 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from app.models.catalog import Catalog, Stylesheet
-from app.renderer import STATIC_DIR, render_static, theme_css, theme_hash
+from app.renderer import STATIC_DIR, render_static
+from app.theme import theme_css, theme_hash
 
 FULL = {
     "paper": "#F7F5F0",

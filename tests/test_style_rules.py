@@ -58,7 +58,10 @@ def test_templates_have_no_inline_style_or_script(path):
     html = path.read_text(encoding="utf-8")
     assert not re.search(r"\sstyle=", html)
     assert not re.search(r"\son[a-z]+=", html)
-    assert "<script" not in html
+    # Scripts only as external files (CSP: script-src 'self').
+    for tag in re.findall(r"<script[^>]*>", html):
+        assert re.search(r'\ssrc="/static/js/[a-z0-9-]+\.js"', tag), tag
+    assert not re.search(r"<script[^>]*>\s*[^<\s]", html)
 
 
 @pytest.mark.parametrize("path", TEMPLATES, ids=lambda p: p.name)

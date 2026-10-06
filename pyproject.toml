@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "workbook-server"
-version = "0.1.0"
+version = "0.2.0"
 description = "Self-hosted server that turns YAML/JSON task catalogs into interactive workbooks for IT apprentices."
 requires-python = ">=3.11"
 dependencies = [
@@ -50,3 +50,7 @@ extend-immutable-calls = ["typer.Argument", "typer.Option"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    # httpx is the test client named in the stack; Starlette nudges towards httpx2.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]

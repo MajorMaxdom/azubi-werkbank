@@ -18,15 +18,8 @@ from markdown_it import MarkdownIt
 from markupsafe import Markup
 
 from app.i18n import ROOT, Translator, get_translator
-from app.models.catalog import (
-    DURATION_PATTERN,
-    HEX_COLOR_PATTERN,
-    Catalog,
-    Day,
-    Module,
-    Stylesheet,
-    Task,
-)
+from app.models.catalog import DURATION_PATTERN, Catalog, Day, Module, Task
+from app.theme import theme_css, theme_hash
 
 APP_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = APP_DIR / "templates"
@@ -88,62 +81,6 @@ def task_hash(task: Task) -> str:
     payload = task.model_dump(mode="json", exclude={"trainer"})
     normalized = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-
-
-# --------------------------------------------------------------------------- theme
-
-STYLESHEET_PROPERTIES: dict[str, str] = {
-    "paper": "--paper",
-    "card": "--card",
-    "ink": "--ink",
-    "muted": "--muted",
-    "line": "--line",
-    "accent": "--accent",
-    "accent_hover": "--accent-hover",
-    "accent_soft": "--accent-soft",
-    "ok": "--ok",
-    "redo": "--redo",
-    "hint_bg": "--hint-bg",
-    "trainer_bg": "--trainer-bg",
-    "bonus_bg": "--bonus-bg",
-}
-LEVEL_PROPERTIES: dict[str, str] = {
-    color: f"--level-{color}" for color in ("blue", "ochre", "green", "grey", "red")
-}
-_HEX_RE = re.compile(HEX_COLOR_PATTERN)
-
-
-def theme_declarations(stylesheet: Stylesheet | None) -> list[tuple[str, str]]:
-    if stylesheet is None:
-        return []
-    decls: list[tuple[str, str]] = []
-    for key, prop in STYLESHEET_PROPERTIES.items():
-        value = getattr(stylesheet, key)
-        if value is not None:
-            decls.append((prop, value))
-    if stylesheet.level_palette is not None:
-        for key, prop in LEVEL_PROPERTIES.items():
-            value = getattr(stylesheet.level_palette, key)
-            if value is not None:
-                decls.append((prop, value))
-    for prop, value in decls:
-        # Defense in depth: the model already validated these.
-        if not _HEX_RE.fullmatch(value):
-            raise ValueError(f"Refusing non-hex color for {prop}")
-    return decls
-
-
-def theme_css(stylesheet: Stylesheet | None) -> str:
-    """Generated per-workbook overrides: one ``:root`` block with only the set keys."""
-    decls = theme_declarations(stylesheet)
-    if not decls:
-        return ""
-    body = "".join(f"  {prop}: {value};\n" for prop, value in decls)
-    return f":root {{\n{body}}}\n"
-
-
-def theme_hash(css: str) -> str:
-    return hashlib.sha256(css.encode("utf-8")).hexdigest()[:16]
 
 
 # --------------------------------------------------------------------------- view model

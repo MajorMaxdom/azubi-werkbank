@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body_class %}{{ 'page' }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="/">{{ t('app.name') }}</a>
+</header>
+<main class="sheet sheet-wide">
+{% block content %}{% endblock %}
+</main>
+{% endblock %}
