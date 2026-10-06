@@ -1,0 +1,29 @@
+# Workbook server configuration. Copy to config.yaml (development) or
+# /etc/workbook/config.yaml (production, see deploy/README.md) and adjust.
+# Every key is optional; the values below are the defaults unless noted.
+# Relative paths are resolved against the directory of this file.
+
+# Public URL of the site. Used for invite links and the same-origin check
+# (browsers must send exactly this scheme://host[:port] as Origin).
+base_url: https://arbeitsheft.example.de        # default: http://127.0.0.1:8000
+
+# The app only ever listens on localhost; Caddy terminates TLS in front of it.
+listen_host: 127.0.0.1
+listen_port: 8000
+
+paths:
+  workbooks: workbooks      # catalogs (*.yaml, *.yml, *.json) + assets/
+  progress: progress        # progress/<workbook-id>/<username>.json
+  users: users.yaml         # user list (human-editable)
+  data: data                # credentials.json, secret.key (app-managed)
+  locales: locales          # locales/de.yaml (UI strings)
+
+session_idle_minutes: 480   # log out after 8 h without activity
+login_max_attempts: 5       # failed logins per user before the lockout
+login_lockout_minutes: 15
+invite_valid_hours: 72
+auth_mode: local            # reserved for a later "header" mode (Caddy forward_auth)
+
+# __Host- cookies with the Secure flag. Only set to false for plain-HTTP
+# testing without Caddy (browsers drop Secure cookies over http://).
+secure_cookies: true

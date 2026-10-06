@@ -4,7 +4,27 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.5.0] - 2026-10-06
+## [0.6.0] - 2026-10-06
+
+### Added
+- `deploy/Caddyfile` (TLS, HSTS, CSP and the other security headers from the
+  plan, JSON access log), `deploy/workbook.service` (dedicated `workbook`
+  user, state in `/var/lib/workbook`, `ProtectSystem=strict` and further
+  hardening), optional fail2ban filter and jail.
+- `deploy/README.md`: installation on Ubuntu/Debian, DNS and port
+  forwarding, first Fachbetreuer via CLI, catalog authoring rights, backups
+  (restic or nightly git commit), updates, troubleshooting.
+- `config.example.yaml` with every configuration key.
+- Tests: every server-rendered page is CSP-compatible (no inline scripts or
+  styles, no event handlers, only same-origin scripts and stylesheets);
+  deploy files contain the planned headers and hardening.
+
+### Verified
+- Install steps executed on Debian 12 with a hardened systemd service behind
+  Caddy (internal TLS): invite, login, autosave, SSE through the proxy, real
+  client IP in `auth.login_failed`, file modes 0600/0700.
+
+ - 2026-10-06
 
 ### Added
 - Review view `/workbooks/{workbook}/users/{username}` for Fachbetreuer:

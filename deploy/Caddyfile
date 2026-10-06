@@ -1,0 +1,17 @@
+# /etc/caddy/Caddyfile — replace the host name with your domain.
+# Caddy obtains and renews the TLS certificate automatically (ports 80 + 443).
+arbeitsheft.example.de {
+	reverse_proxy 127.0.0.1:8000
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+		-Server
+	}
+	log {
+		output file /var/log/caddy/arbeitsheft.log
+		format json
+	}
+}

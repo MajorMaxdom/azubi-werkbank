@@ -1,0 +1,47 @@
+# /etc/systemd/system/workbook.service
+[Unit]
+Description=Workbook server (Arbeitshefte)
+Documentation=file:///opt/workbook/deploy/README.md
+After=network.target
+
+[Service]
+Type=simple
+User=workbook
+Group=workbook
+Environment=WORKBOOK_CONFIG=/etc/workbook/config.yaml
+WorkingDirectory=/var/lib/workbook
+ExecStart=/opt/workbook/.venv/bin/workbook serve
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+# State: users.yaml, data/, progress/ and workbooks/ live in /var/lib/workbook.
+# The directory itself is 0750 so members of the "workbook" group (catalog
+# authors) can reach workbooks/; data/ and progress/ stay 0700.
+StateDirectory=workbook
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/workbook
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
