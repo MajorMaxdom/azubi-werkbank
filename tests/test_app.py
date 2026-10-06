@@ -102,7 +102,7 @@ def test_network_security_page_renders_without_trainer_content(tmp_path):
     with TestClient(create_app(config, watch=False)) as client:
         html = client.get("/workbooks/network-security").text
     assert "Wie startet ein Linux-System?" in html
-    assert "Bereich Ausbilder" not in html
+    assert "Bereich Fachbetreuer" not in html
     assert "Reihenfolge A – C – E – D – B." not in html
 
 

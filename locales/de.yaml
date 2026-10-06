@@ -32,7 +32,7 @@ block:
   note_warning: Achtung
 
 trainer:
-  heading: Bereich Ausbilder
+  heading: Bereich Fachbetreuer
   expectations: "Das sollte drinstehen:"
   notes: "Interne Notizen:"
   status: Status
@@ -48,7 +48,7 @@ signoff:
   comment_placeholder: "Gesamteindruck, Stärken, Entwicklungsfelder …"
   date: Geprüft am
   by: Geprüft durch
-  by_placeholder: Name Ausbilder/in
+  by_placeholder: Name Fachbetreuer/in
 
 app:
   name: Arbeitshefte

@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- UI term "Ausbilder" is now "Fachbetreuer" (role value stays `trainer`).
+- `network-security` workbook 4.1.0: "Ausbilder" → "Fachbetreuer" in the
+  content; header field "Ausbilder/in" removed.
+- `docs/PLAN.md`: Fachbetreuer assignment per apprentice workbook with
+  per-task overrides (implemented with the `users.yaml` model in 0.3.0).
+
 ## [0.2.0] - 2026-10-06
 
 ### Added

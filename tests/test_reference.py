@@ -22,6 +22,13 @@ SKIP_TAGS = {"script", "style", "title", "button", "option", "summary"}
 SKIP_TEXT = {"0 / 0 erledigt"}
 # Labels that the reference writes inline and the app renders as micro labels.
 LABEL_PREFIXES = ("Anforderung: ", "Lernziel: ")
+# Agreed changes since the conversion (workbook 4.1.0): the header field
+# "Ausbilder/in" was removed and "Ausbilder" is called "Fachbetreuer".
+REMOVED = {"Ausbilder/in", "Name Ausbilder/in"}
+
+
+def adapt(text: str) -> str:
+    return text.replace("Ausbilder", "Fachbetreuer")
 
 
 class Segments(HTMLParser):
@@ -88,8 +95,9 @@ def test_every_reference_text_is_rendered(reference, rendered):
     haystack = "\n".join(rendered.segments)
     missing = []
     for segment in reference.segments:
-        if segment in SKIP_TEXT:
+        if segment in SKIP_TEXT or segment in REMOVED:
             continue
+        segment = adapt(segment)
         for prefix in LABEL_PREFIXES:
             segment = segment.removeprefix(prefix)
         if segment not in haystack:
@@ -98,7 +106,11 @@ def test_every_reference_text_is_rendered(reference, rendered):
 
 
 def test_every_reference_placeholder_is_rendered(reference, rendered):
-    missing = [p for p in reference.placeholders if p not in rendered.placeholders]
+    missing = [
+        adapt(p)
+        for p in reference.placeholders
+        if p not in REMOVED and adapt(p) not in rendered.placeholders
+    ]
     # The reference trainer/signoff placeholders come from locales and may differ in punctuation.
     missing = [p for p in missing if not p.startswith(("Kommentar / Feedback", "Gesamteindruck"))]
     assert missing == []
@@ -130,5 +142,5 @@ def test_apprentice_view_has_no_trainer_content(catalog):
     for tv in build_view(catalog).tasks_by_id.values():
         for expectation in tv.task.trainer.expectations:
             assert expectation[:40] not in html
-    assert "Bereich Ausbilder" not in html
+    assert "Bereich Fachbetreuer" not in html
     assert "Das sollte drinstehen" not in html

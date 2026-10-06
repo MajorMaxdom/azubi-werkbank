@@ -71,6 +71,11 @@ users:
     role: apprentice
     workbooks: [network-security]   # optional; omitted = all workbooks
     active: true                    # default true
+    supervisors:                    # optional; responsible trainer ("Fachbetreuer")
+      network-security:             # per workbook of this apprentice
+        default: mmustermann              # responsible for the whole workbook ...
+        tasks:                      # ... unless a task names someone else
+          lb02-terms: kschulz
 ```
 
 `data/credentials.json` (app-managed only, mode 0600):
@@ -84,6 +89,24 @@ users:
 ```
 
 `data/secret.key`: random 64 bytes, generated on first start if missing, mode 0600.
+
+### Fachbetreuer (supervisors)
+- "Fachbetreuer" is the German UI term for the `trainer` role (decided
+  2026-10-06; the UI never says "Ausbilder"). Role values stay `trainer` /
+  `apprentice`.
+- Every workbook of an apprentice has at most one responsible Fachbetreuer
+  (`supervisors.<workbook>.default`). Individual tasks may name a different one
+  (`supervisors.<workbook>.tasks.<task-id>`). Resolution per task: task entry,
+  else the workbook default, else nobody.
+- One Fachbetreuer can be responsible for any number of apprentices.
+- The assignment is informational (overview, "who should check this"). Every
+  Fachbetreuer may see and review all tasks of all apprentices.
+- Usernames in `supervisors` must be existing `trainer` users; unknown names or
+  unknown workbook/task ids are shown as warnings in `/admin/users` and do not
+  block login.
+- Introduced with the `users.yaml` model in 0.3.0; shown in the review view in
+  0.5.0. A per-user overview page (all tasks, status, Fachbetreuer) is planned
+  after 1.0.0.
 
 ### Rules
 - A user can log in only if present in `users.yaml`, `active: true`, and has a
