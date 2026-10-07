@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] - 2026-10-07
+
+### Added
+- Own certificate instead of Caddy: with `tls_cert` and `tls_key` in the
+  config the app serves HTTPS itself (wildcard or host certificate, PEM).
+- Installer: asks how the site is reached – HTTPS via Caddy, HTTPS with an
+  own certificate, or only locally (`--https caddy|cert|none`, `--cert`,
+  `--key`). Checks that key and certificate match, that the certificate is
+  valid and covers the domain. systemd hands the files to the service
+  (`LoadCredential`, originals keep their permissions); ports below 1024 get
+  `CAP_NET_BIND_SERVICE` only; `werkbank-tls.path` restarts the service when
+  the certificate is renewed (also when symlinks are replaced).
+- The app sets the security headers itself (CSP, X-Frame-Options,
+  X-Content-Type-Options, Referrer-Policy; HSTS for https), identical to the
+  Caddy site; no `Server` header.
+
+### Changed
+- `deploy/uninstall.sh` also removes the certificate units and drop-ins.
+
 ## [1.11.0] - 2026-10-07
 
 ### Changed

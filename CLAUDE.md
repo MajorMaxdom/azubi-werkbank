@@ -76,6 +76,10 @@ tests/
 
 ## Security rules (non-negotiable)
 - App listens on `127.0.0.1` only; Caddy terminates TLS in front of it.
+  Exception (1.12.0): the optional own-certificate mode (`tls_cert`/`tls_key`)
+  where the app serves HTTPS itself on a public port; the key reaches the
+  service only via systemd `LoadCredential`. Security headers are set by the
+  app itself (`app/security.py`), identical to the Caddy site.
 - The current user is resolved in exactly one place (auth middleware/dependency).
   Never take the acting username from the URL, query or request body.
 - Apprentices may only read/write their own progress. Trainers may read all

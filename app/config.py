@@ -8,12 +8,14 @@ from typing import Literal
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from ruamel.yaml import YAML
 
 CONFIG_ENV = "WERKBANK_CONFIG"
 LEGACY_CONFIG_ENV = "WORKBOOK_CONFIG"  # deprecated name, still read
 DEFAULT_CONFIG_FILE = Path("config.yaml")
+# systemd LoadCredential= names for the TLS files (see deploy/install.sh).
+TLS_CREDENTIALS = ("tls.crt", "tls.key")
 
 
 class Paths(BaseModel):
@@ -42,6 +44,16 @@ class Config(BaseModel):
     secure_cookies: bool = True
     # Time zone for dates and times shown in the UI, CSV and exports.
     timezone: str = "Europe/Berlin"
+    # Serve HTTPS directly with these PEM files instead of running behind
+    # Caddy: certificate (with chain) and private key. Both or neither.
+    tls_cert: Path | None = None
+    tls_key: Path | None = None
+
+    @model_validator(mode="after")
+    def _tls_pair(self) -> Config:
+        if (self.tls_cert is None) != (self.tls_key is None):
+            raise ValueError("tls_cert and tls_key must be set together")
+        return self
 
     @field_validator("timezone")
     @classmethod
@@ -58,13 +70,34 @@ class Config(BaseModel):
         parts = urlsplit(self.base_url)
         return f"{parts.scheme}://{parts.netloc}"
 
+    def tls_files(self) -> tuple[Path, Path] | None:
+        """Certificate and key to serve HTTPS with, or None (plain HTTP).
+
+        Under systemd the files are handed over with LoadCredential=, so the
+        service user needs no access to the originals (often root-only).
+        """
+        if self.tls_cert is None or self.tls_key is None:
+            return None
+        credentials = os.environ.get("CREDENTIALS_DIRECTORY")
+        if credentials:
+            cert, key = (Path(credentials) / name for name in TLS_CREDENTIALS)
+            if cert.is_file() and key.is_file():
+                return cert, key
+        return self.tls_cert, self.tls_key
+
     def resolve_paths(self, base: Path) -> Config:
         """Return a copy with relative paths resolved against ``base``."""
-        resolved = {
-            name: (value if value.is_absolute() else (base / value)).resolve()
-            for name, value in self.paths.model_dump().items()
+
+        def resolve(value: Path) -> Path:
+            return (value if value.is_absolute() else (base / value)).resolve()
+
+        resolved = {name: resolve(value) for name, value in self.paths.model_dump().items()}
+        tls = {
+            name: resolve(value)
+            for name in ("tls_cert", "tls_key")
+            if (value := getattr(self, name)) is not None
         }
-        return self.model_copy(update={"paths": Paths(**resolved)})
+        return self.model_copy(update={"paths": Paths(**resolved), **tls})
 
 
 def load_config(path: Path | None = None) -> Config:

@@ -367,6 +367,8 @@ Rules:
 base_url: https://werkbank.example.de   # used for invite links and Origin check
 listen_host: 127.0.0.1
 listen_port: 8000
+tls_cert: null          # own certificate instead of Caddy (1.12.0): PEM with chain
+tls_key: null           # ... and its key; then listen_host 0.0.0.0, public port
 paths:
   workbooks: workbooks
   progress: progress

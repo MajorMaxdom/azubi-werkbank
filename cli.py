@@ -184,6 +184,7 @@ def serve(config: Path | None = ConfigOption) -> None:
             web_app.state.broadcaster.close()
             super().handle_exit(sig, frame)
 
+    tls = settings.tls_files()
     Server(
         uvicorn.Config(
             web_app,
@@ -192,6 +193,9 @@ def serve(config: Path | None = ConfigOption) -> None:
             proxy_headers=True,
             forwarded_allow_ips="127.0.0.1",
             timeout_graceful_shutdown=5,
+            server_header=False,
+            ssl_certfile=str(tls[0]) if tls else None,
+            ssl_keyfile=str(tls[1]) if tls else None,
         )
     ).run()
 

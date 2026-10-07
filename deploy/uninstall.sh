@@ -5,7 +5,8 @@
 #   sudo ./deploy/uninstall.sh --backup /root/werkbank-backup.tar.gz --purge-data
 #
 # Always removed:
-#   - systemd service werkbank (stopped, disabled, unit file deleted)
+#   - systemd service werkbank (stopped, disabled, unit file deleted), its
+#     drop-ins and the certificate watcher werkbank-tls (own-certificate mode)
 #   - command /usr/local/bin/werkbank
 #   - configuration /etc/werkbank
 #   - Caddy site /etc/caddy/werkbank.caddy and its "import" line in the main
@@ -51,7 +52,7 @@ ok()   { printf '\033[1;32m ok\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m !!\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mERR\033[0m %s\n' "$*" >&2; exit 1; }
 
-usage() { sed -n '2,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,27p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 confirm() {  # confirm "Question" -> 0 if yes
     [[ "$ASSUME_YES" == 1 ]] && return 0
@@ -130,6 +131,17 @@ make_backup() {
 }
 
 remove_service() {
+    local tls
+    for tls in "$SERVICE-tls.path" "$SERVICE-tls.service"; do
+        [[ -f "/etc/systemd/system/$tls" ]] || continue
+        systemctl disable --now "$tls" >/dev/null 2>&1 || true
+        rm -f "/etc/systemd/system/$tls"
+        ok "Unit $tls removed"
+    done
+    if [[ -d "$UNIT.d" ]]; then
+        rm -rf "$UNIT.d"
+        ok "Drop-ins $UNIT.d removed"
+    fi
     if [[ -f "$UNIT" ]]; then
         systemctl disable --now "$SERVICE" >/dev/null 2>&1 || true
         rm -f "$UNIT"

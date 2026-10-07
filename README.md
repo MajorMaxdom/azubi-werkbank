@@ -67,7 +67,8 @@ Screenshots: add images to docs/screenshots/ and reference them here, e.g.
 - Invite links, argon2id passwords, lockout and rate limiting, CSRF/Origin
   checks, strict Content-Security-Policy, sandboxed systemd service
 - Trainer-only content never reaches apprentices' browsers
-- One-step installer for Debian/Ubuntu behind Caddy with automatic HTTPS
+- One-step installer for Debian/Ubuntu: behind Caddy with automatic HTTPS or
+  with an own (wildcard) certificate
 
 ## Installation
 
@@ -80,8 +81,10 @@ cd /opt/werkbank
 sudo ./deploy/install.sh
 ```
 
-The installer asks for the data directory, the domain, the port of the web
-server and the first Fachbetreuer, sets up everything (system user, service, Caddy) and prints the
+The installer asks for the data directory, how the site is reached (HTTPS via
+Caddy with an automatic certificate, HTTPS with an own — e.g. wildcard —
+certificate, or only locally), the domain, the port and the first
+Fachbetreuer, sets up everything (system user, service, Caddy) and prints the
 invite link. It is safe to run again and leaves an existing Caddy setup with
 other sites intact. `sudo ./deploy/uninstall.sh` removes it again (data is
 kept unless you pass `--purge-data`). Manual steps, backups and updates:

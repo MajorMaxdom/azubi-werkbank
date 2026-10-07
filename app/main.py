@@ -35,6 +35,7 @@ from app.i18n import Translator
 from app.loader import Registry
 from app.progress import CorruptProgress, ProgressStore
 from app.renderer import STATIC_DIR, create_environment, set_display_timezone
+from app.security import SecurityHeadersMiddleware
 
 log = logging.getLogger(__name__)
 
@@ -94,6 +95,7 @@ def create_app(config: Config | None = None, *, watch: bool = True) -> FastAPI:
     app.state.progress = ProgressStore(config.paths.progress)
 
     app.add_middleware(AuthMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware, hsts=config.origin.startswith("https://"))
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(auth.router)
     app.include_router(account.router)

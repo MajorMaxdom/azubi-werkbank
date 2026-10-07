@@ -9,10 +9,17 @@
 # Without options the script asks for everything it needs. All options:
 #
 #   --data-dir DIR        where users, answers and catalogs live   (default /var/lib/werkbank)
-#   --domain NAME         public host name, e.g. werkbank.firma.de (enables Caddy + HTTPS)
+#   --https MODE          caddy | cert | none                      (asked)
+#                           caddy: Caddy in front, automatic certificate
+#                           cert:  the app serves HTTPS itself with your certificate
+#                           none:  plain HTTP on 127.0.0.1 only (SSH tunnel)
+#   --domain NAME         public host name, e.g. werkbank.firma.de
+#   --cert FILE           --https cert: certificate (PEM with chain), wildcard or for the domain
+#   --key FILE            --https cert: private key (PEM, unencrypted)
 #   --tls-internal        Caddy uses its own CA instead of Let's Encrypt (intranet/VPN only)
-#   --no-caddy            do not install or configure Caddy
-#   --port PORT           local port of the app                    (asked, default 8000)
+#   --no-caddy            with --domain: do not configure Caddy (own reverse proxy)
+#   --port PORT           port of the app (asked; caddy/none: local port, default
+#                         8000 – cert: public HTTPS port, default 443)
 #   --admin USERNAME      username of the first Fachbetreuer       (e.g. mmustermann)
 #   --admin-name "NAME"   display name of the first Fachbetreuer   (e.g. "Max Mustermann")
 #   --timezone ZONE       time zone for dates in the UI            (default Europe/Berlin)
@@ -41,6 +48,10 @@ CADDY_BACKUP=""
 
 DATA_DIR=""
 DOMAIN=""
+HTTPS_MODE=""
+TLS_CERT=""
+TLS_KEY=""
+TLS_UNIT="$SERVICE-tls"
 TLS_INTERNAL=0
 WITH_CADDY=1
 PORT=""
@@ -56,7 +67,7 @@ ok()   { printf '\033[1;32m ok\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m !!\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mERR\033[0m %s\n' "$*" >&2; exit 1; }
 
-usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 ask() {  # ask VAR "Question" "default"
     local var="$1" question="$2" default="${3:-}" answer=""
@@ -79,6 +90,9 @@ parse_args() {
         case "$1" in
             --data-dir) DATA_DIR="${2:?}"; shift 2 ;;
             --domain) DOMAIN="${2:?}"; shift 2 ;;
+            --https) HTTPS_MODE="${2:?}"; shift 2 ;;
+            --cert) TLS_CERT="${2:?}"; shift 2 ;;
+            --key) TLS_KEY="${2:?}"; shift 2 ;;
             --tls-internal) TLS_INTERNAL=1; shift ;;
             --no-caddy) WITH_CADDY=0; shift ;;
             --port) PORT="${2:?}"; shift 2 ;;
@@ -115,8 +129,9 @@ check_location() {  # check_location LABEL PATH
     esac
 }
 
-# Port the app listens on (127.0.0.1 only; Caddy forwards to it). A re-run
-# defaults to the port of the existing config.
+# Port the app listens on: 127.0.0.1 only behind Caddy, or the public HTTPS
+# port with an own certificate. A re-run defaults to the port of the existing
+# config.
 port_in_use() {  # port_in_use PORT -> 0 if another program listens on it
     command -v ss >/dev/null || return 1
     [[ -n "$(ss -Hltn "sport = :$1" 2>/dev/null)" ]] || return 1
@@ -131,15 +146,21 @@ config_port() {
 }
 
 choose_port() {
-    local default given="$PORT"
+    local default given="$PORT" lowest=1024
+    local question="Local port of the web server (only 127.0.0.1, Caddy forwards to it)"
     default="$(config_port)"
+    if [[ "$HTTPS_MODE" == cert ]]; then
+        question="Public HTTPS port of the web server (443 = no port in the address)"
+        lowest=1
+        default="${default:-443}"
+    fi
     default="${default:-8000}"
     while true; do
-        [[ -n "$given" ]] && PORT="$given" || ask PORT "Local port of the web server (only 127.0.0.1, Caddy forwards to it)" "$default"
+        [[ -n "$given" ]] && PORT="$given" || ask PORT "$question" "$default"
         given=""
         local problem=""
-        if ! [[ "$PORT" =~ ^[0-9]+$ && "$PORT" -ge 1024 && "$PORT" -le 65535 ]]; then
-            problem="Invalid port '$PORT' (1024–65535)."
+        if ! [[ "$PORT" =~ ^[0-9]+$ && "$PORT" -ge "$lowest" && "$PORT" -le 65535 ]]; then
+            problem="Invalid port '$PORT' ($lowest–65535)."
         elif port_in_use "$PORT"; then
             problem="Port $PORT is already in use by another program."
         fi
@@ -153,6 +174,99 @@ choose_port() {
     fi
 }
 
+config_value() {  # config_value KEY -> value of a top-level key in the existing config
+    [[ -f "$CONFIG_FILE" ]] && sed -n "s/^$1:[[:space:]]*\([^#[:space:]]*\).*/\1/p" "$CONFIG_FILE" | head -n 1
+    return 0
+}
+
+# caddy | cert | none. Without questions (--yes): cert if --cert is given,
+# caddy if --domain is given, otherwise none. A re-run suggests the mode of
+# the existing config.
+choose_https_mode() {
+    if [[ -z "$HTTPS_MODE" ]]; then
+        local default=1 choice="" cert_in_config
+        cert_in_config="$(config_value tls_cert)"
+        if [[ -n "$TLS_CERT" || "$cert_in_config" == /* ]]; then
+            default=2
+        elif [[ "$(config_value base_url)" == http://* ]]; then
+            default=3
+        fi
+        if [[ "$ASSUME_YES" == 1 || ! -t 0 ]]; then
+            if [[ -n "$TLS_CERT" ]]; then HTTPS_MODE=cert
+            elif [[ -n "$DOMAIN" ]]; then HTTPS_MODE=caddy
+            else HTTPS_MODE=none; fi
+        else
+            printf '%s\n' "How should users reach the web server?" \
+                "  1) HTTPS via Caddy – automatic certificate (Let's Encrypt)" \
+                "  2) HTTPS with an own certificate file (wildcard or for the domain), no Caddy" \
+                "  3) Only locally on 127.0.0.1 (SSH tunnel), no HTTPS"
+            while true; do
+                ask choice "Choice" "$default"
+                case "$choice" in
+                    1|caddy) HTTPS_MODE=caddy; break ;;
+                    2|cert) HTTPS_MODE=cert; break ;;
+                    3|none) HTTPS_MODE=none; break ;;
+                    *) warn "Please answer 1, 2 or 3." ;;
+                esac
+            done
+        fi
+    fi
+    if [[ -f "$CONFIG_FILE" ]]; then
+        local configured=caddy
+        [[ "$(config_value base_url)" == http://* ]] && configured=none
+        [[ "$(config_value tls_cert)" == /* ]] && configured=cert
+        if [[ "$configured" != "$HTTPS_MODE" ]]; then
+            warn "The existing config ($CONFIG_FILE) uses '$configured' and is kept – '$HTTPS_MODE' is ignored."
+            warn "To switch, edit base_url/listen_host/listen_port/tls_cert/tls_key there (deploy/README.md)."
+            HTTPS_MODE="$configured"
+        fi
+    fi
+    case "$HTTPS_MODE" in
+        caddy) ;;
+        cert) WITH_CADDY=0 ;;
+        none) WITH_CADDY=0; DOMAIN="" ;;
+        *) die "Invalid --https mode '$HTTPS_MODE' (caddy, cert or none)." ;;
+    esac
+}
+
+# Checks a certificate/key pair: readable PEM, key belongs to the certificate,
+# not expired, valid for the domain (openssl also matches wildcards).
+certificate_problem() {  # certificate_problem CERT KEY DOMAIN -> prints the problem, if any
+    local cert="$1" key="$2" domain="$3"
+    [[ "$cert" == /* && "$key" == /* ]] || { echo "Please give absolute paths."; return; }
+    [[ -r "$cert" ]] || { echo "Certificate not found or not readable: $cert"; return; }
+    [[ -r "$key" ]] || { echo "Key not found or not readable: $key"; return; }
+    openssl x509 -in "$cert" -noout >/dev/null 2>&1 \
+        || { echo "$cert is not a PEM certificate."; return; }
+    openssl pkey -in "$key" -noout -passin pass: >/dev/null 2>&1 \
+        || { echo "$key is not an unencrypted PEM private key."; return; }
+    [[ "$(openssl x509 -in "$cert" -noout -pubkey 2>/dev/null)" == "$(openssl pkey -in "$key" -pubout 2>/dev/null)" ]] \
+        || { echo "The key does not belong to the certificate."; return; }
+    openssl x509 -in "$cert" -noout -checkend 0 >/dev/null 2>&1 \
+        || { echo "The certificate has expired ($(openssl x509 -in "$cert" -noout -enddate | cut -d= -f2))."; return; }
+    if ! openssl x509 -in "$cert" -noout -checkhost "$domain" 2>/dev/null | grep -q "does match"; then
+        local names
+        names="$(openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null | tail -n +2 | sed 's/^ *//')"
+        echo "The certificate is not valid for $domain (it covers: ${names:-no subjectAltName})."
+    fi
+}
+
+choose_certificate() {
+    local default_cert default_key problem
+    default_cert="$(config_value tls_cert)"; [[ "$default_cert" == /* ]] || default_cert=""
+    default_key="$(config_value tls_key)"; [[ "$default_key" == /* ]] || default_key=""
+    while true; do
+        [[ -n "$TLS_CERT" ]] || ask TLS_CERT "Certificate file (PEM with intermediate chain, e.g. fullchain.pem)" "$default_cert"
+        [[ -n "$TLS_KEY" ]] || ask TLS_KEY "Private key file (PEM, e.g. privkey.pem)" "$default_key"
+        problem="$(certificate_problem "$TLS_CERT" "$TLS_KEY" "$DOMAIN")"
+        [[ -z "$problem" ]] && break
+        [[ "$ASSUME_YES" == 1 || ! -t 0 ]] && die "$problem"
+        warn "$problem"
+        TLS_CERT=""; TLS_KEY=""
+    done
+    ok "Certificate valid for $DOMAIN until $(openssl x509 -in "$TLS_CERT" -noout -enddate | cut -d= -f2)"
+}
+
 valid_id() { [[ "$1" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]]; }
 
 collect_settings() {
@@ -163,13 +277,22 @@ collect_settings() {
     DATA_DIR="${DATA_DIR%/}"
     check_location "The data directory" "$DATA_DIR"
 
-    if [[ -z "$DOMAIN" && "$WITH_CADDY" == 1 ]]; then
-        ask DOMAIN "Domain for HTTPS via Caddy (empty = no Caddy, app only on localhost)" ""
+    choose_https_mode
+    if [[ "$HTTPS_MODE" != none && -z "$DOMAIN" ]]; then
+        local known=""
+        if [[ "$(config_value base_url)" == https://* ]]; then
+            known="$(config_value base_url)"; known="${known#https://}"; known="${known%%[:/]*}"
+        fi
+        [[ "$ASSUME_YES" == 1 || ! -t 0 ]] && [[ -z "$known" ]] \
+            && die "--domain is required for --https $HTTPS_MODE."
+        while [[ -z "$DOMAIN" ]]; do
+            ask DOMAIN "Domain users open in the browser (e.g. werkbank.firma.de)" "$known"
+        done
     fi
-    [[ -n "$DOMAIN" ]] || WITH_CADDY=0
     if [[ -n "$DOMAIN" && ! "$DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]]; then
         die "Invalid domain: $DOMAIN"
     fi
+    [[ "$HTTPS_MODE" == cert ]] && choose_certificate
     choose_port
 
     [[ -n "$ADMIN_NAME" ]] || ask ADMIN_NAME "Name of the first Fachbetreuer" ""
@@ -202,7 +325,7 @@ install_packages() {
     info "Installing system packages"
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
-    apt-get install -y -qq git python3 python3-venv curl ca-certificates >/dev/null
+    apt-get install -y -qq git python3 python3-venv curl ca-certificates openssl >/dev/null
     python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' \
         || die "Python 3.11 or newer is required (found $(python3 --version 2>&1))."
     ok "$(python3 --version)"
@@ -247,8 +370,17 @@ write_config() {
         ok "Existing config kept: $CONFIG_FILE"
         return
     fi
-    local base_url secure
-    if [[ -n "$DOMAIN" ]]; then
+    local base_url secure listen_host="127.0.0.1" tls=""
+    if [[ "$HTTPS_MODE" == cert ]]; then
+        base_url="https://$DOMAIN"; secure=true; listen_host="0.0.0.0"
+        [[ "$PORT" == 443 ]] || base_url="$base_url:$PORT"
+        tls="
+# HTTPS directly with an own certificate (no Caddy). systemd hands both files
+# to the service (/etc/systemd/system/$SERVICE.service.d/tls.conf).
+tls_cert: $TLS_CERT
+tls_key: $TLS_KEY
+"
+    elif [[ -n "$DOMAIN" ]]; then
         base_url="https://$DOMAIN"; secure=true
     else
         base_url="http://127.0.0.1:$PORT"; secure=false
@@ -259,9 +391,9 @@ write_config() {
 
 # Exactly the address users type in the browser.
 base_url: $base_url
-listen_host: 127.0.0.1
+listen_host: $listen_host
 listen_port: $PORT
-
+$tls
 paths:
   workbooks: $DATA_DIR/workbooks
   progress: $DATA_DIR/progress
@@ -307,19 +439,96 @@ write_service() {
         # covered by ReadWritePaths= alone.
         sed -i -e '/^StateDirectory=/d' -e '/^StateDirectoryMode=/d' "$unit"
     fi
+    write_tls_units
     systemctl daemon-reload
     systemctl enable "$SERVICE" >/dev/null 2>&1
     systemctl restart "$SERVICE"
-    local i
+    local i check="http://127.0.0.1:$PORT/login"
+    [[ "$(config_value tls_cert)" == /* ]] && check="https://127.0.0.1:$PORT/login"
     for i in $(seq 1 60); do
-        if curl -fs -o /dev/null "http://127.0.0.1:$PORT/login"; then
-            ok "Service running on 127.0.0.1:$PORT"
+        if curl -fsk -o /dev/null "$check"; then
+            ok "Service running on ${check%/login}"
+            [[ "$check" == https://* ]] && check_public_certificate
             return
         fi
         sleep 0.5
     done
     journalctl -u "$SERVICE" -n 30 --no-pager >&2 || true
     die "The service did not start – see the log above."
+}
+
+# Own certificate: systemd hands certificate and key to the service
+# (LoadCredential – the originals keep their permissions), ports below 1024
+# get CAP_NET_BIND_SERVICE, and a path unit restarts the service when the
+# files are renewed. The directories are watched as well: certbot & co. renew
+# by replacing symlinks, which a watch on the file alone does not notice.
+# Everything follows the config, so a kept config keeps its setup.
+write_tls_units() {
+    local dropin="/etc/systemd/system/$SERVICE.service.d"
+    local cert key port
+    cert="$(config_value tls_cert)"; key="$(config_value tls_key)"
+    port="$(config_port)"
+    if ! [[ "$cert" == /* && "$key" == /* ]]; then
+        if [[ -f "$dropin/tls.conf" || -f "/etc/systemd/system/$TLS_UNIT.path" ]]; then
+            systemctl disable --now "$TLS_UNIT.path" >/dev/null 2>&1 || true
+            rm -f "$dropin/tls.conf" "/etc/systemd/system/$TLS_UNIT.path" "/etc/systemd/system/$TLS_UNIT.service"
+            rmdir "$dropin" 2>/dev/null || true
+            ok "Own-certificate setup removed (the config has no tls_cert)"
+        fi
+        return
+    fi
+    install -d -m 0755 "$dropin"
+    {
+        echo "# Written by deploy/install.sh: HTTPS with an own certificate."
+        echo "[Service]"
+        echo "LoadCredential=tls.crt:$cert"
+        echo "LoadCredential=tls.key:$key"
+        if [[ "${port:-0}" -lt 1024 ]]; then
+            echo "AmbientCapabilities=CAP_NET_BIND_SERVICE"
+            echo "CapabilityBoundingSet=CAP_NET_BIND_SERVICE"
+        fi
+    } > "$dropin/tls.conf"
+    {
+        echo "# Written by deploy/install.sh: restart $SERVICE when the certificate is renewed."
+        echo "[Unit]"
+        echo "Description=Azubi-Werkbank – watch the TLS certificate"
+        echo
+        echo "[Path]"
+        echo "PathChanged=$cert"
+        echo "PathChanged=$key"
+        echo "PathChanged=$(dirname "$cert")"
+        [[ "$(dirname "$key")" == "$(dirname "$cert")" ]] || echo "PathChanged=$(dirname "$key")"
+        echo "Unit=$TLS_UNIT.service"
+        echo
+        echo "[Install]"
+        echo "WantedBy=multi-user.target"
+    } > "/etc/systemd/system/$TLS_UNIT.path"
+    {
+        echo "# Written by deploy/install.sh: started by $TLS_UNIT.path."
+        echo "[Unit]"
+        echo "Description=Azubi-Werkbank – load the renewed TLS certificate"
+        echo
+        echo "[Service]"
+        echo "Type=oneshot"
+        echo "# Renewal tools write certificate and key one after the other."
+        echo "ExecStartPre=/bin/sleep 10"
+        echo "ExecStart=/bin/systemctl try-restart $SERVICE.service"
+    } > "/etc/systemd/system/$TLS_UNIT.service"
+    systemctl daemon-reload
+    systemctl enable "$TLS_UNIT.path" >/dev/null 2>&1
+    systemctl restart "$TLS_UNIT.path"
+    ok "Certificate handed to the service; renewals restart it automatically"
+}
+
+# The browser's view: does the served certificate verify for the domain?
+check_public_certificate() {
+    local domain
+    domain="$(config_value base_url)"; domain="${domain#https://}"; domain="${domain%%[:/]*}"
+    if curl -fs -o /dev/null --resolve "$domain:$PORT:127.0.0.1" "https://$domain:$PORT/login"; then
+        ok "Certificate verified for https://$domain:$PORT"
+    else
+        warn "curl does not trust the certificate for $domain – intermediate chain missing (use fullchain.pem) or a private CA?"
+    fi
 }
 
 caddyfile_content() {  # caddyfile_content DOMAIN PORT TLS_INTERNAL
@@ -430,7 +639,7 @@ create_admin() {
 
 summary() {
     local url
-    if [[ -n "$DOMAIN" ]]; then url="https://$DOMAIN/"; else url="http://127.0.0.1:$PORT/"; fi
+    url="$(config_value base_url)/"
     cat <<EOF
 
 ────────────────────────────────────────────────────────────────────────────
@@ -454,7 +663,15 @@ EOF
  users in the browser under "Nutzer".
 EOF
     fi
-    if [[ -z "$DOMAIN" ]]; then
+    if [[ "$(config_value tls_cert)" == /* ]]; then
+        cat <<EOF
+
+ The app serves HTTPS itself on port $PORT (all interfaces). Open that port
+ in the firewall and point the DNS entry for the domain to this server.
+ Certificate: $(config_value tls_cert)
+ Renewed certificates are picked up automatically ($TLS_UNIT.path).
+EOF
+    elif [[ -z "$DOMAIN" ]]; then
         cat <<EOF
 
  Without a domain the app only listens on 127.0.0.1. To reach it from your

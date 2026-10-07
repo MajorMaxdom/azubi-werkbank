@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "azubi-werkbank"
-version = "1.11.0"
+version = "1.12.0"
 description = "Azubi-Werkbank: self-hosted server that turns YAML/JSON task catalogs into interactive workbooks for IT apprentices."
 readme = "README.md"
 license = "GPL-3.0-only"

@@ -7,9 +7,17 @@
 # (browsers must send exactly this scheme://host[:port] as Origin).
 base_url: https://werkbank.example.de        # default: http://127.0.0.1:8000
 
-# The app only ever listens on localhost; Caddy terminates TLS in front of it.
+# Behind Caddy (default) the app only listens on localhost and Caddy
+# terminates TLS in front of it.
 listen_host: 127.0.0.1
 listen_port: 8000
+
+# Without Caddy: serve HTTPS directly with an existing certificate (PEM,
+# wildcard or for this host; certificate with chain + private key). Then set
+# listen_host: 0.0.0.0, the public port and base_url: https://host[:port].
+# deploy/install.sh ("own certificate") sets all of this up.
+tls_cert: null              # e.g. /etc/letsencrypt/live/example.de/fullchain.pem
+tls_key: null               # e.g. /etc/letsencrypt/live/example.de/privkey.pem
 
 paths:
   workbooks: workbooks      # catalogs (*.yaml, *.yml, *.json) + assets/

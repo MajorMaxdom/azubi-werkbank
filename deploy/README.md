@@ -25,11 +25,18 @@ cd /opt/werkbank
 sudo ./deploy/install.sh
 ```
 
-It asks for the data directory (default `/var/lib/werkbank`), the domain, the
-local port of the web server (default 8000; ports in use are rejected) and
-the first Fachbetreuer, then installs packages, the system user, the venv,
-the config, the systemd service, the `werkbank` command and — if a domain is
-given — Caddy, and prints the invite link of the first Fachbetreuer.
+It asks for the data directory (default `/var/lib/werkbank`), how the site is
+reached, the domain, the port of the web server (ports in use are rejected)
+and the first Fachbetreuer, then installs packages, the system user, the venv,
+the config, the systemd service and the `werkbank` command, and prints the
+invite link of the first Fachbetreuer. The three ways to reach the site:
+
+1. **HTTPS via Caddy** (default) — Caddy in front, automatic Let's Encrypt
+   certificate. The app listens on a local port (default 8000).
+2. **HTTPS with an own certificate** — no Caddy; see
+   [Own certificate instead of Caddy](#own-certificate-instead-of-caddy).
+3. **Only locally** — plain HTTP on 127.0.0.1, reachable through an SSH tunnel.
+
 Non-interactive:
 
 ```sh
@@ -37,13 +44,48 @@ sudo ./deploy/install.sh --yes --data-dir /var/lib/werkbank --port 8000 \
   --domain werkbank.firma.de --admin mmustermann --admin-name "Max Mustermann"
 ```
 
-Options: `--tls-internal` (Caddy's own CA, for intranet/VPN-only setups),
-`--no-caddy`, `--timezone`; `--help` lists all. Running it again is
+Options: `--https caddy|cert|none`, `--cert FILE --key FILE`,
+`--tls-internal` (Caddy's own CA, for intranet/VPN-only setups), `--no-caddy`
+(with `--domain`: own reverse proxy), `--timezone`; `--help` lists all. Running it again is
 safe: existing config, data and users are kept. Code and data must not live
 below `/home`, `/root` or `/tmp` (the service is sandboxed). An existing Caddy
 setup stays intact: the site goes to `/etc/caddy/werkbank.caddy` and the main
 `Caddyfile` only gets an `import` line (backed up first, restored if the
 combined config does not validate).
+
+### Own certificate instead of Caddy
+
+If you already have a certificate — a wildcard (`*.firma.de`) or one for the
+exact host name — the app can serve HTTPS itself:
+
+```sh
+sudo ./deploy/install.sh --https cert --domain werkbank.firma.de \
+  --cert /etc/letsencrypt/live/firma.de/fullchain.pem \
+  --key /etc/letsencrypt/live/firma.de/privkey.pem --port 443
+```
+
+- **Files**: PEM, the certificate *with* its intermediate chain
+  (`fullchain.pem`, not `cert.pem`), and the unencrypted private key. The
+  installer checks that the key belongs to the certificate, that it has not
+  expired and that it is valid for the domain (wildcards included).
+- **Permissions stay as they are**: systemd reads both files as root and hands
+  them to the service (`LoadCredential=` in
+  `/etc/systemd/system/werkbank.service.d/tls.conf`); the `werkbank` user never
+  needs access to the originals.
+- **Port**: any free port; 443 gives addresses without a port. For ports below
+  1024 the service gets only `CAP_NET_BIND_SERVICE`. The app listens on all
+  interfaces (`listen_host: 0.0.0.0`) — open the port in the firewall. Port 80
+  is not used (no HTTP→HTTPS redirect).
+- **Renewal**: `werkbank-tls.path` watches both files and their directories
+  (renewal tools usually replace symlinks) and restarts the service about
+  10 seconds after a change. Sessions survive the restart.
+- **Security headers** (CSP, HSTS, …) are set by the app itself, identical to
+  the Caddy site.
+- **Switching** between Caddy and own certificate: change `base_url`,
+  `listen_host`, `listen_port`, `tls_cert` and `tls_key` in
+  `/etc/werkbank/config.yaml` and run the installer again (it keeps the config
+  and sets up or removes the certificate units to match). Remove an unused
+  Caddy site by deleting `/etc/caddy/werkbank.caddy` and its `import` line.
 
 The following sections describe the same steps by hand.
 
