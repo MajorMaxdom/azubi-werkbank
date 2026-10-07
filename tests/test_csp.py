@@ -228,3 +228,27 @@ def test_uninstall_script_removes_only_the_werkbank_caddy_import(tmp_path):
         env=env,
     )  # fmt: skip
     assert refused.returncode != 0
+
+
+def test_install_script_rejects_invalid_port(tmp_path):
+    """deploy/install.sh refuses privileged ports and keeps the configured one."""
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    script = ROOT / "deploy" / "install.sh"
+    config = tmp_path / "config.yaml"
+
+    def choose(port: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [bash, "-c", f'source "{script}"; CONFIG_FILE="{config}"; ASSUME_YES=1; '
+                         f'PORT={port}; choose_port; echo "PORT=$PORT"'],
+            capture_output=True, text=True, stdin=subprocess.DEVNULL,
+        )  # fmt: skip
+
+    bad = choose("80")
+    assert bad.returncode != 0 and "Invalid port" in bad.stderr
+    config.write_text("listen_port: 8123\n")
+    assert choose('""').stdout.strip() == "PORT=8123"

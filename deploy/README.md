@@ -25,19 +25,20 @@ cd /opt/werkbank
 sudo ./deploy/install.sh
 ```
 
-It asks for the data directory (default `/var/lib/werkbank`), the domain and
+It asks for the data directory (default `/var/lib/werkbank`), the domain, the
+local port of the web server (default 8000; ports in use are rejected) and
 the first Fachbetreuer, then installs packages, the system user, the venv,
 the config, the systemd service, the `werkbank` command and — if a domain is
 given — Caddy, and prints the invite link of the first Fachbetreuer.
 Non-interactive:
 
 ```sh
-sudo ./deploy/install.sh --yes --data-dir /var/lib/werkbank \
+sudo ./deploy/install.sh --yes --data-dir /var/lib/werkbank --port 8000 \
   --domain werkbank.firma.de --admin mmustermann --admin-name "Max Mustermann"
 ```
 
 Options: `--tls-internal` (Caddy's own CA, for intranet/VPN-only setups),
-`--no-caddy`, `--port`, `--timezone`; `--help` lists all. Running it again is
+`--no-caddy`, `--timezone`; `--help` lists all. Running it again is
 safe: existing config, data and users are kept. Code and data must not live
 below `/home`, `/root` or `/tmp` (the service is sandboxed). An existing Caddy
 setup stays intact: the site goes to `/etc/caddy/werkbank.caddy` and the main

@@ -12,7 +12,7 @@
 #   --domain NAME         public host name, e.g. werkbank.firma.de (enables Caddy + HTTPS)
 #   --tls-internal        Caddy uses its own CA instead of Let's Encrypt (intranet/VPN only)
 #   --no-caddy            do not install or configure Caddy
-#   --port PORT           local port of the app                    (default 8000)
+#   --port PORT           local port of the app                    (asked, default 8000)
 #   --admin USERNAME      username of the first Fachbetreuer       (e.g. mmustermann)
 #   --admin-name "NAME"   display name of the first Fachbetreuer   (e.g. "Max Mustermann")
 #   --timezone ZONE       time zone for dates in the UI            (default Europe/Berlin)
@@ -41,7 +41,7 @@ DATA_DIR=""
 DOMAIN=""
 TLS_INTERNAL=0
 WITH_CADDY=1
-PORT=8000
+PORT=""
 ADMIN_USER=""
 ADMIN_NAME=""
 TIMEZONE="Europe/Berlin"
@@ -113,6 +113,44 @@ check_location() {  # check_location LABEL PATH
     esac
 }
 
+# Port the app listens on (127.0.0.1 only; Caddy forwards to it). A re-run
+# defaults to the port of the existing config.
+port_in_use() {  # port_in_use PORT -> 0 if another program listens on it
+    command -v ss >/dev/null || return 1
+    [[ -n "$(ss -Hltn "sport = :$1" 2>/dev/null)" ]] || return 1
+    # Our own running service on its configured port is fine.
+    [[ "$1" == "$(config_port)" ]] && systemctl is-active --quiet "$SERVICE" && return 1
+    return 0
+}
+
+config_port() {
+    [[ -f "$CONFIG_FILE" ]] && sed -n 's/^listen_port:[[:space:]]*\([0-9]*\).*/\1/p' "$CONFIG_FILE" | head -n 1
+    return 0
+}
+
+choose_port() {
+    local default given="$PORT"
+    default="$(config_port)"
+    default="${default:-8000}"
+    while true; do
+        [[ -n "$given" ]] && PORT="$given" || ask PORT "Local port of the web server (only 127.0.0.1, Caddy forwards to it)" "$default"
+        given=""
+        local problem=""
+        if ! [[ "$PORT" =~ ^[0-9]+$ && "$PORT" -ge 1024 && "$PORT" -le 65535 ]]; then
+            problem="Invalid port '$PORT' (1024–65535)."
+        elif port_in_use "$PORT"; then
+            problem="Port $PORT is already in use by another program."
+        fi
+        [[ -z "$problem" ]] && break
+        [[ "$ASSUME_YES" == 1 || ! -t 0 ]] && die "$problem Use --port."
+        warn "$problem"
+    done
+    if [[ -n "$(config_port)" && "$PORT" != "$(config_port)" ]]; then
+        warn "Existing config uses port $(config_port) and is kept – using that port."
+        PORT="$(config_port)"
+    fi
+}
+
 valid_id() { [[ "$1" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]]; }
 
 collect_settings() {
@@ -130,7 +168,7 @@ collect_settings() {
     if [[ -n "$DOMAIN" && ! "$DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]]; then
         die "Invalid domain: $DOMAIN"
     fi
-    [[ "$PORT" =~ ^[0-9]+$ && "$PORT" -ge 1 && "$PORT" -le 65535 ]] || die "Invalid port: $PORT"
+    choose_port
 
     [[ -n "$ADMIN_NAME" ]] || ask ADMIN_NAME "Name of the first Fachbetreuer" ""
     [[ -n "$ADMIN_USER" ]] || ask ADMIN_USER "Username of the first Fachbetreuer (a-z, 0-9, -)" "$(suggest_username "$ADMIN_NAME")"

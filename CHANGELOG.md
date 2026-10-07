@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-10-07
+
+### Changed
+- `deploy/install.sh` asks for the local port of the web server (default
+  8000, or the port of an existing config). Ports below 1024 or already used
+  by another program are rejected (asked again interactively, error with
+  `--yes`). An existing config keeps its port.
+
 ## [1.9.0] - 2026-10-07
 
 ### Added

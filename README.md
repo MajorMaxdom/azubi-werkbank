@@ -80,8 +80,8 @@ cd /opt/werkbank
 sudo ./deploy/install.sh
 ```
 
-The installer asks for the data directory, the domain and the first
-Fachbetreuer, sets up everything (system user, service, Caddy) and prints the
+The installer asks for the data directory, the domain, the port of the web
+server and the first Fachbetreuer, sets up everything (system user, service, Caddy) and prints the
 invite link. It is safe to run again and leaves an existing Caddy setup with
 other sites intact. `sudo ./deploy/uninstall.sh` removes it again (data is
 kept unless you pass `--purge-data`). Manual steps, backups and updates:
