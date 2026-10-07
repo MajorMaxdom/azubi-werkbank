@@ -252,3 +252,67 @@ def test_install_script_rejects_invalid_port(tmp_path):
     assert bad.returncode != 0 and "Invalid port" in bad.stderr
     config.write_text("listen_port: 8123\n")
     assert choose('""').stdout.strip() == "PORT=8123"
+
+
+def _caddy_env(tmp_path):
+    etc = tmp_path / "etc"
+    etc.mkdir()
+    (etc / "Caddyfile").write_text(':9999 {\n\trespond "other"\n}\n')
+    log = tmp_path / "log" / "werkbank.log"
+    # Fake systemctl first in PATH ("timeout" execs binaries, not shell
+    # functions): tests must never reach the real Caddy service.
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake = fake_bin / "systemctl"
+    fake.write_text('#!/bin/sh\n[ "$1" = is-active ] && exit 0\necho "$@" >> "$0.log"\nexit 1\n')
+    fake.chmod(0o755)
+    env = {"PATH": f"{fake_bin}:/usr/bin:/bin:/usr/sbin:/sbin", "CADDY_DIR": str(etc),
+           "CADDY_BIN": "true", "CADDY_LOG": str(log)}  # fmt: skip
+    return etc, env
+
+
+def test_install_script_takes_import_back_when_reload_fails(tmp_path):
+    """A failed Caddy reload must not leave the import in the main Caddyfile."""
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    script = ROOT / "deploy" / "install.sh"
+    etc, env = _caddy_env(tmp_path)
+    original = (etc / "Caddyfile").read_text()
+    run = subprocess.run(
+        [bash, "-c", f'source "{script}"; id() {{ return 1; }}; DOMAIN=wb.example.org PORT=8014 '
+                     "TLS_INTERNAL=0; install_caddy_site; reload_caddy"],
+        capture_output=True, text=True, env=env,
+    )  # fmt: skip
+    assert run.returncode != 0
+    assert "journalctl -u caddy" in run.stderr
+    assert (etc / "Caddyfile").read_text() == original
+    assert not (etc / "werkbank.caddy").exists()
+    assert (tmp_path / "bin" / "systemctl.log").read_text() == "reload caddy\n"
+    assert "restart" not in script.read_text().split("reload_caddy() {")[1].split("\n}")[0]
+
+
+def test_install_script_hands_the_access_log_to_caddy(tmp_path):
+    """caddy validate runs as root; the log file must still belong to caddy."""
+    import os
+    import pwd
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None or os.geteuid() != 0:
+        pytest.skip("needs bash and root")
+    try:
+        caddy = pwd.getpwnam("caddy")
+    except KeyError:
+        pytest.skip("no caddy user")
+    script = ROOT / "deploy" / "install.sh"
+    _, env = _caddy_env(tmp_path)
+    log = tmp_path / "log" / "werkbank.log"
+    log.parent.mkdir()
+    log.touch(mode=0o600)  # as left behind by "caddy validate" running as root
+    subprocess.run([bash, "-c", f'source "{script}"; prepare_caddy_log'], check=True, env=env)
+    assert (log.stat().st_uid, log.stat().st_gid) == (caddy.pw_uid, caddy.pw_gid)

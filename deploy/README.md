@@ -271,6 +271,10 @@ uninstalled.
   send `Origin: null` on form submissions. Use `same-origin` in
   `/etc/caddy/werkbank.caddy` and `systemctl reload caddy`, or run
   `deploy/install.sh` again after `git pull`.
+- **Installer hangs at "Import line added" / Caddy rejects the site with
+  `open /var/log/caddy/werkbank.log: permission denied`** (installs before
+  1.10.2): `sudo chown caddy:caddy /var/log/caddy/werkbank.log`, then
+  `sudo caddy reload --config /etc/caddy/Caddyfile`.
 - **Login always fails over plain `http://`** — expected with
   `secure_cookies: true`; always use the HTTPS address via Caddy.
 - **`/admin/catalogs` shows errors** — fix the file; the previous valid version

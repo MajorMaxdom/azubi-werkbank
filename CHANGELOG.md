@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.10.2] - 2026-10-07
+
+### Fixed
+- Installer: `caddy validate` (run as root) created
+  `/var/log/caddy/werkbank.log` as root:root 0600, so the running Caddy could
+  not open it, rejected the new configuration and `systemctl reload caddy`
+  hung. The log file is now created for the `caddy` user before and after
+  validation (an existing root-owned file is fixed on re-run).
+- Installer: the Caddy reload has a time limit; if it fails, the `import` line
+  is taken back so a later Caddy restart cannot fail because of it. The
+  fallback `systemctl restart caddy` was removed – a failing restart would
+  stop every site on a shared Caddy.
+
 ## [1.10.1] - 2026-10-07
 
 ### Fixed

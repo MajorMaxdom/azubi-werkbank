@@ -32,10 +32,12 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Caddy integration: our site lives in its own file that the main Caddyfile
 # imports, so existing sites on the same server stay untouched.
-# (CADDY_DIR, CADDY_BIN and CADDY_RELOAD can be overridden for testing.)
+# (CADDY_DIR, CADDY_BIN, CADDY_RELOAD and CADDY_LOG can be overridden for testing.)
 CADDY_DIR="${CADDY_DIR:-/etc/caddy}"
 CADDY_BIN="${CADDY_BIN:-caddy}"
 CADDY_RELOAD="${CADDY_RELOAD:-1}"
+CADDY_LOG="${CADDY_LOG:-/var/log/caddy/werkbank.log}"
+CADDY_BACKUP=""
 
 DATA_DIR=""
 DOMAIN=""
@@ -347,17 +349,50 @@ setup_caddy() {
     fi
     install_caddy_site
     if [[ "$CADDY_RELOAD" == 1 ]]; then
-        install -d -o caddy -g caddy /var/log/caddy
-        systemctl enable caddy >/dev/null 2>&1
-        systemctl reload caddy 2>/dev/null || systemctl restart caddy
+        systemctl enable caddy >/dev/null 2>&1 || true
+        reload_caddy
     fi
     ok "Caddy configured ($CADDY_DIR/werkbank.caddy)"
+}
+
+# The access log must belong to the caddy user. "caddy validate" runs as root
+# and would otherwise create it as root:root 0600 – the running Caddy then
+# cannot open it and rejects the whole configuration.
+prepare_caddy_log() {
+    local owner="caddy"
+    id -u "$owner" >/dev/null 2>&1 || return 0
+    if [[ ! -d "$(dirname "$CADDY_LOG")" ]]; then
+        install -d -o "$owner" -g "$owner" -m 0755 "$(dirname "$CADDY_LOG")"
+    fi
+    [[ -e "$CADDY_LOG" ]] || install -o "$owner" -g "$owner" -m 0600 /dev/null "$CADDY_LOG"
+    chown "$owner:$owner" "$CADDY_LOG"
+}
+
+# Never restart: a failing restart would take down every site on this Caddy.
+# A failed reload keeps the old configuration running; then our import is
+# taken back so that the next Caddy restart cannot fail because of it.
+reload_caddy() {
+    local result=0
+    if systemctl is-active --quiet caddy; then
+        timeout 120 systemctl reload caddy >/dev/null 2>&1 || result=$?
+    else
+        timeout 120 systemctl start caddy >/dev/null 2>&1 || result=$?
+    fi
+    [[ "$result" == 0 ]] && { ok "Caddy reloaded (other sites keep running)"; return; }
+    if [[ -n "$CADDY_BACKUP" ]]; then
+        cp -p "$CADDY_BACKUP" "$CADDY_DIR/Caddyfile"
+        rm -f "$CADDY_DIR/werkbank.caddy"
+        warn "Import taken back – $CADDY_DIR/Caddyfile restored from $CADDY_BACKUP."
+    fi
+    [[ "$result" == 124 ]] && warn "systemctl did not answer within 120 s (job may still be pending: systemctl list-jobs)."
+    die "Caddy did not accept the configuration – see: journalctl -u caddy -n 30"
 }
 
 install_caddy_site() {
     local main="$CADDY_DIR/Caddyfile" site="$CADDY_DIR/werkbank.caddy"
     local line="import $site" backup=""
     install -d -m 0755 "$CADDY_DIR"
+    prepare_caddy_log
     caddyfile_content "$DOMAIN" "$PORT" "$TLS_INTERNAL" > "$site"
     chmod 0644 "$site"
     if [[ ! -f "$main" ]]; then
@@ -375,6 +410,8 @@ install_caddy_site() {
         fi
         die "Caddy configuration is invalid – check: $CADDY_BIN validate --config $main"
     fi
+    prepare_caddy_log
+    CADDY_BACKUP="$backup"
 }
 
 create_admin() {
