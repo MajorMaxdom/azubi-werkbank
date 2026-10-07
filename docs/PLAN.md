@@ -73,7 +73,7 @@ users:
     active: true                    # default true
     supervisors:                    # optional; responsible trainer ("Fachbetreuer")
       network-security:             # per workbook of this apprentice
-        default: mmustermann              # responsible for the whole workbook ...
+        default: mmustermann        # responsible for the whole workbook ...
         tasks:                      # ... unless a task names someone else
           lb02-terms: kschulz
 ```

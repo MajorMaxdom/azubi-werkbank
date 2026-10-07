@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.10.3] - 2026-10-07
+
+### Changed
+- Examples in docs, installer help and tests use the placeholder
+  "Max Mustermann" (`mmustermann`) instead of a real name; package authors
+  are "Azubi-Werkbank contributors".
+
 ## [1.10.2] - 2026-10-07
 
 ### Fixed

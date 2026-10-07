@@ -602,7 +602,17 @@ def test_cli_user_commands(tmp_path, monkeypatch):
     runner = CliRunner()
     added = runner.invoke(
         cli_app,
-        ["user", "add", "mmustermann", "--name", "Max Mustermann", "--role", "trainer", "-c", str(cfg)],
+        [
+            "user",
+            "add",
+            "mmustermann",
+            "--name",
+            "Max Mustermann",
+            "--role",
+            "trainer",
+            "-c",
+            str(cfg),
+        ],
     )
     assert added.exit_code == 0, added.output
     assert f"{BASE_URL}/invite/" in added.output

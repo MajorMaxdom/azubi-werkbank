@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "azubi-werkbank"
-version = "1.10.2"
+version = "1.10.3"
 description = "Azubi-Werkbank: self-hosted server that turns YAML/JSON task catalogs into interactive workbooks for IT apprentices."
 readme = "README.md"
 license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
-authors = [{ name = "Max Mustermann" }]
+authors = [{ name = "Azubi-Werkbank contributors" }]
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
