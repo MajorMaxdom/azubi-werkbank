@@ -169,9 +169,7 @@ tests/        pytest suite
 ## License
 
 Azubi-Werkbank is licensed under the
-[GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). If you run
-a modified version as a network service, you must offer its source code to
-its users.
+[GNU General Public License v3.0](LICENSE) (GPL-3.0-only).
 
 Bundled third-party assets: Inter and JetBrains Mono fonts (SIL Open Font
 License 1.1) and Lucide icons (ISC License) — license texts in
