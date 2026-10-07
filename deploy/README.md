@@ -127,7 +127,7 @@ of every form and autosave request.
 ```sh
 sudo install -d -o werkbank -g werkbank -m 0750 /var/lib/werkbank
 sudo install -d -o werkbank -g werkbank -m 2775 /var/lib/werkbank/workbooks /var/lib/werkbank/workbooks/assets
-sudo cp /opt/werkbank/workbooks/network-security.yaml /var/lib/werkbank/workbooks/
+sudo cp /opt/werkbank/workbooks/linux-basics.yaml /var/lib/werkbank/workbooks/
 sudo cp /opt/werkbank/workbooks/_template.yaml /var/lib/werkbank/workbooks/
 sudo chown werkbank:werkbank /var/lib/werkbank/workbooks/*.yaml
 sudo -u werkbank /opt/werkbank/.venv/bin/werkbank validate /var/lib/werkbank/workbooks

@@ -118,8 +118,8 @@ days:
 ```
 
 Every field is documented in [`docs/workbook-template.yaml`](docs/workbook-template.yaml);
-the guide is [`docs/AUTHORING.md`](docs/AUTHORING.md). A complete five-day
-example ships in [`workbooks/network-security.yaml`](workbooks/network-security.yaml).
+the guide is [`docs/AUTHORING.md`](docs/AUTHORING.md). A small demo workbook
+ships in [`workbooks/linux-basics.yaml`](workbooks/linux-basics.yaml).
 
 ## Development
 

@@ -4,7 +4,7 @@ A workbook ("Arbeitsheft") is one YAML (or JSON) file in the `workbooks/`
 directory. The server picks up new and changed files within about a second —
 no restart, no build step. This guide explains how to write one. The complete
 field reference with comments is [`workbook-template.yaml`](workbook-template.yaml);
-a real, complete example is `workbooks/network-security.yaml`.
+a small demo workbook is `workbooks/linux-basics.yaml`.
 
 Keys are English; everything apprentices read (titles, tasks, hints, labels)
 is written in German.
@@ -181,7 +181,7 @@ to `workbooks/`:
 
 ```yaml
 - type: image
-  src: assets/network-security/topology.png
+  src: assets/linux-basics/topology.png
   alt: Netzwerktopologie des Labors      # required
   caption: "Abb. 1: Labor-Topologie"
 ```
