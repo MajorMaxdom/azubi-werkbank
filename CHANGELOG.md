@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-10-07
+
+### Added
+- `deploy/uninstall.sh`: removes service, `werkbank` command, `/etc/werkbank`,
+  Caddy site and its `import` line (Caddyfile backed up, validated, restored
+  on failure; other sites untouched), fail2ban files, cron files, venv and
+  system user. Data is kept unless `--purge-data` is given; `--backup FILE`
+  writes a `.tar.gz` of data and config first; `--remove-code` deletes the
+  clone; `--data-dir` purges data kept by an earlier run. Safe to run again.
+- Public demo workbook `workbooks/linux-basics.yaml`.
+
+### Changed
+- The workbook template uses neutral example content.
+- Tests no longer need private catalogs (reference tests skip without them).
+- README and deployment guide point to github.com/MajorMaxdom/azubi-werkbank.
+
 ## [1.8.1] - 2026-10-06
 
 ### Added

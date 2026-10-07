@@ -196,3 +196,35 @@ def test_install_script_syntax_and_caddy_site(tmp_path):
     assert "reverse_proxy 127.0.0.1:8123" in out
     assert "Content-Security-Policy" in out
     assert "example.de" not in out
+
+
+def test_uninstall_script_removes_only_the_werkbank_caddy_import(tmp_path):
+    """deploy/uninstall.sh parses, drops its import line and keeps other sites."""
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    script = ROOT / "deploy" / "uninstall.sh"
+    subprocess.run([bash, "-n", str(script)], check=True)
+    site = tmp_path / "werkbank.caddy"
+    site.write_text(":9998 {\n\treverse_proxy 127.0.0.1:8013\n}\n")
+    main = tmp_path / "Caddyfile"
+    other = ':9999 {\n\trespond "other"\n}\n'
+    main.write_text(f"{other}\n# Azubi-Werkbank (added by deploy/install.sh)\nimport {site}\n")
+    env = {"PATH": "/usr/bin:/bin", "CADDY_DIR": str(tmp_path),
+           "CADDY_BIN": "no-such-caddy", "CADDY_RELOAD": "0"}  # fmt: skip
+    subprocess.run(
+        [bash, "-c", f'source "{script}"; remove_caddy_site'],
+        check=True, capture_output=True, env=env,
+    )  # fmt: skip
+    assert main.read_text() == other + "\n"
+    assert not site.exists()
+    assert list(tmp_path.glob("Caddyfile.bak-werkbank-uninstall-*"))
+
+    refused = subprocess.run(
+        [bash, "-c", f'source "{script}"; safe_data_dir /var/lib || safe_data_dir "{tmp_path}"'],
+        env=env,
+    )  # fmt: skip
+    assert refused.returncode != 0

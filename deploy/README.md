@@ -20,7 +20,7 @@ After step 1 (DNS and ports), everything else can be done by
 `deploy/install.sh`:
 
 ```sh
-sudo git clone https://github.com/<account>/azubi-werkbank.git /opt/werkbank
+sudo git clone https://github.com/MajorMaxdom/azubi-werkbank.git /opt/werkbank
 cd /opt/werkbank
 sudo ./deploy/install.sh
 ```
@@ -240,6 +240,26 @@ sudo cp /opt/werkbank/deploy/fail2ban-jail.conf /etc/fail2ban/jail.d/werkbank.co
 sudo systemctl restart fail2ban
 sudo fail2ban-client status werkbank
 ```
+
+## Uninstall
+
+```sh
+cd /opt/werkbank
+sudo ./deploy/uninstall.sh                     # remove everything, KEEP the data
+sudo ./deploy/uninstall.sh --backup /root/werkbank-backup.tar.gz --purge-data
+```
+
+Removes the service, the `werkbank` command, `/etc/werkbank`, the Caddy site
+`/etc/caddy/werkbank.caddy` and its `import` line (the main Caddyfile is
+backed up and validated; other sites and Caddy itself stay), the fail2ban
+filter/jail, `/etc/cron.d/werkbank-*`, the venv and the system user.
+
+The data directory (users, answers, workbooks) is only deleted with
+`--purge-data`; `--backup FILE` writes a `.tar.gz` of data and config first.
+If the data was kept in an earlier run, delete it later with
+`--data-dir DIR --purge-data`. `--remove-code` also deletes the clone itself,
+`--yes` skips the questions. Packages (Python, Caddy, fail2ban) are not
+uninstalled.
 
 ## Troubleshooting
 

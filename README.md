@@ -75,7 +75,7 @@ Requirements: Debian 12 or Ubuntu 24.04, Python 3.11+, root access. For
 HTTPS: a domain pointing to the server and ports 80/443 reachable.
 
 ```sh
-sudo git clone https://github.com/<account>/azubi-werkbank.git /opt/werkbank
+sudo git clone https://github.com/MajorMaxdom/azubi-werkbank.git /opt/werkbank
 cd /opt/werkbank
 sudo ./deploy/install.sh
 ```
@@ -83,7 +83,8 @@ sudo ./deploy/install.sh
 The installer asks for the data directory, the domain and the first
 Fachbetreuer, sets up everything (system user, service, Caddy) and prints the
 invite link. It is safe to run again and leaves an existing Caddy setup with
-other sites intact. Manual steps, backups and updates:
+other sites intact. `sudo ./deploy/uninstall.sh` removes it again (data is
+kept unless you pass `--purge-data`). Manual steps, backups and updates:
 [`deploy/README.md`](deploy/README.md).
 
 ## Writing a workbook
