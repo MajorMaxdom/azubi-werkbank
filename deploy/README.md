@@ -266,7 +266,11 @@ uninstalled.
 
 - **Login or saving fails with "Die Sitzung ist abgelaufen oder die Anfrage kam
   von einer fremden Seite"** — `base_url` does not match the address in the
-  browser (scheme, host or port).
+  browser (scheme, host or port), or the Caddy site still sends
+  `Referrer-Policy no-referrer` (installs before 1.10.1): with it, browsers
+  send `Origin: null` on form submissions. Use `same-origin` in
+  `/etc/caddy/werkbank.caddy` and `systemctl reload caddy`, or run
+  `deploy/install.sh` again after `git pull`.
 - **Login always fails over plain `http://`** — expected with
   `secure_cookies: true`; always use the HTTPS address via Caddy.
 - **`/admin/catalogs` shows errors** — fix the file; the previous valid version

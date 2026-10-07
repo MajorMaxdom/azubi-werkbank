@@ -395,7 +395,7 @@ Provide `config.example.yaml`; `config.yaml` is git-ignored, as are
   		Strict-Transport-Security "max-age=31536000"
   		X-Content-Type-Options nosniff
   		X-Frame-Options DENY
-  		Referrer-Policy no-referrer
+  		Referrer-Policy same-origin
   		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
   		-Server
   	}

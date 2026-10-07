@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.10.1] - 2026-10-07
+
+### Fixed
+- Behind Caddy, forms (setting the first password, login, password change)
+  were rejected with "Die Sitzung ist abgelaufen …": the site sent
+  `Referrer-Policy: no-referrer`, which makes browsers send `Origin: null` on
+  form POSTs. The Caddy site now uses `Referrer-Policy: same-origin` (still no
+  referrer to other sites). Existing installs: run `deploy/install.sh` again
+  or change the header in `/etc/caddy/werkbank.caddy`.
+
 ## [1.10.0] - 2026-10-07
 
 ### Changed

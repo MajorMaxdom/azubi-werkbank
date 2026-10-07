@@ -152,7 +152,7 @@ def test_caddyfile_has_the_planned_headers():
     caddyfile = (ROOT / "deploy" / "Caddyfile").read_text(encoding="utf-8")
     assert f'Content-Security-Policy "{CSP_LINE}"' in caddyfile
     for header in ('Strict-Transport-Security "max-age=31536000"', "X-Content-Type-Options nosniff",
-                   "X-Frame-Options DENY", "Referrer-Policy no-referrer", "-Server",
+                   "X-Frame-Options DENY", "Referrer-Policy same-origin", "-Server",
                    "reverse_proxy 127.0.0.1:8000", "werkbank.example.de"):  # fmt: skip
         assert header in caddyfile
 
